@@ -1,0 +1,1125 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chủ Nghĩa Xã Hội Khoa Học</title>
+    <style>
+      :root {
+        --bg1: #89f7fe;
+        --bg2: #66a6ff;
+        --card: #ffffff;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --good: #16a34a;
+        --bad: #dc2626;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(135deg, var(--bg1), var(--bg2));
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(22px, 3vw, 30px);
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button {
+        border: none;
+        padding: 10px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        background: var(--accent);
+        color: #fff;
+      }
+      button.secondary {
+        background: #111827;
+      }
+      button.ghost {
+        background: #fff;
+        color: #111827;
+        border: 1px solid #ddd;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+      .qhead {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .qidx {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #fff;
+        background: #111827;
+      }
+      .qtitle {
+        font-weight: 700;
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .answers {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .answers label {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        cursor: pointer;
+        background: #fff;
+      }
+      .answers input {
+        width: 18px;
+        height: 18px;
+      }
+      .tf-item {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        background: #fff;
+        margin-bottom: 8px;
+      }
+      .tf-row {
+        margin-top: 6px;
+        display: flex;
+        gap: 16px;
+      }
+      .dragwrap {
+        display: grid;
+        gap: 12px;
+      }
+      .dragzone {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .zone {
+        min-height: 64px;
+        border: 2px dashed #aaa;
+        border-radius: 14px;
+        padding: 10px;
+        background: #fafafa;
+      }
+      .pill {
+        background: #eef2ff;
+        border: 1px solid #99c;
+        border-radius: 999px;
+        padding: 8px 12px;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        font-weight: 600;
+        user-select: none;
+        cursor: grab;
+        margin: 4px;
+      }
+      .pool,
+      .droparea {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 40px;
+      }
+      .result {
+        margin-top: 12px;
+        font-weight: 700;
+      }
+      .r-good {
+        color: var(--good);
+      }
+      .r-bad {
+        color: var(--bad);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1>Chủ Nghĩa Xã Hội Khoa Học</h1>
+        <div class="toolbar">
+          <button id="btnCheck">Xem kết quả</button>
+          <button class="secondary" id="btnReset">Làm lại & đảo câu</button>
+          <button class="ghost" id="btnToggleKey">Hiện/ẩn đáp án đúng</button>
+          <div class="meta" id="meta">0/0 câu</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap"><div id="list" class="cards"></div></main>
+    <script>
+      const clone = (x) => JSON.parse(JSON.stringify(x));
+      const shuffle = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+      const el = (tag, attrs = {}, html = "") => {
+        const e = document.createElement(tag);
+        Object.entries(attrs).forEach(([k, v]) => {
+          if (k === "class") e.className = v;
+          else if (k === "dataset") Object.assign(e.dataset, v);
+          else e.setAttribute(k, v);
+        });
+        if (html) e.innerHTML = html;
+        return e;
+      };
+      const safeId = (str) =>
+        "id_" +
+        str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9]/g, "_");
+
+      const BANK = [
+        {
+          id: 1,
+          type: "single",
+          title: "Những nhà tư tưởng tiêu biểu của chủ nghĩa xã hội không tưởng phê phán đầu thế kỷ XIX là ai?",
+          options: [
+            "Xanh Ximông, Giăng Mêliê, Rôbớt Ôoen",
+            "Xanh Ximông, Sắclơ Phuriê, Rôbớt Ôoen",
+            "Grắccơ Babớp, Xanh Ximông, Sắclơ Phuriê",
+            "Xanh Ximông, Sắclơ Phuriê, G. Mably",
+          ],
+          answer: ["Xanh Ximông, Sắclơ Phuriê, Rôbớt Ôoen"],
+        },
+        {
+          id: 2,
+          type: "single",
+          title: "Tác phẩm nào đánh dấu sự ra đời của chủ nghĩa xã hội khoa học?",
+          options: [
+            "Tuyên ngôn của Đảng Cộng sản",
+            "Tình cảnh nước Anh",
+            "Góp phần phê phản triết học pháp quyền của Hêghen – Lời nói đầu",
+            "Bộ tư bản",
+          ],
+          answer: ["Tuyên ngôn của Đảng Cộng sản"],
+        },
+        {
+          id: 3,
+          type: "single",
+          title: "Đối tượng nghiên cứu của chủ nghĩa xã hội khoa học là gì?",
+          options: [
+            "Là những quy luật văn hoá - xã hội.",
+            "Là những quy luật và tính quy luật chính trị – xã hội của quá trình phát sinh, hình thành và phát triển của hình thái kinh tế - xã hội cộng sản chủ nghĩa",
+            "Là những quy luật kinh tế",
+            "Là những quy luật hình thành, phát triển và hoàn thiện của các hình thái kinh tế - xã hội.",
+          ],
+          answer: [
+            "Là những quy luật và tính quy luật chính trị – xã hội của quá trình phát sinh, hình thành và phát triển của hình thái kinh tế - xã hội cộng sản chủ nghĩa",
+          ],
+        },
+        {
+          id: 4,
+          type: "single",
+          title: "Phát kiến nào của C.Mác và Ph.Ăngghen chỉ ra sự diệt vong về kinh tế của chủ nghĩa tư bản?",
+          options: [
+            "Học thuyết về sứ mệnh lịch sử toàn thế giới của giai cấp công nhân",
+            "Học thuyết về giá trị thặng dư",
+            "Chủ nghĩa duy vật biện chứng",
+            "Chủ nghĩa duy vật lịch sử",
+          ],
+          answer: ["Học thuyết về giá trị thặng dư"],
+        },
+        {
+          id: 5,
+          type: "single",
+          title: "Ph.Ăngghen đã đánh giá: \"Hai phát hiện vĩ đại này đã đưa chủ nghĩa xã hội trở thành một khoa học\". Hai phát kiến đó là gì?",
+          options: [
+            "Sứ mệnh lịch sử của giai cấp công nhân – Học thuyết giá trị thặng dư",
+            "Sứ mệnh lịch sử của giai cấp công nhân – Chủ nghĩa duy vật lịch sử",
+            "Chủ nghĩa duy vật biện chứng và chủ nghĩa duy vật lịch sử",
+            "Học thuyết giá trị thặng dư – Chủ nghĩa duy vật lịch sử",
+          ],
+          answer: ["Học thuyết giá trị thặng dư – Chủ nghĩa duy vật lịch sử"],
+        },
+        {
+          id: 6,
+          type: "single",
+          title: "Phạm trù nào được coi là cơ bản nhất và là xuất phát điểm của chủ nghĩa xã hội khoa học?",
+          options: [
+            "Giai cấp công nhân",
+            "Cách mạng xã hội chủ nghĩa",
+            "Chuyên chính vô sản",
+            "Sứ mệnh lịch sử của giai cấp công nhân",
+          ],
+          answer: ["Sứ mệnh lịch sử của giai cấp công nhân"],
+        },
+        {
+          id: 7,
+          type: "single",
+          title: "Điền từ còn thiếu vào chỗ trống: Giai cấp công nhân và nhân dân lao động là cơ sở..., cơ sở... của Đảng cộng sản, là nguồn bổ sung lực lượng phong phú cho Đảng.",
+          options: [
+            "Chính trị - xã hội",
+            "Giai cấp – xã hội",
+            "Kinh tế - xã hội",
+            "Văn hoá - xã hội",
+          ],
+          answer: ["Giai cấp – xã hội"],
+        },
+        {
+          id: 8,
+          type: "single",
+          title: "Giai cấp công nhân Việt Nam ra đời vào thời gian nào?",
+          options: [
+            "Trong cuộc khai thác thuộc địa lần thứ nhất của thực dân Pháp",
+            "Những năm đầu thế kỷ 19.",
+            "Trong cuộc khai thác thuộc địa lần thứ hai của thực dân Pháp",
+            "Trước khi thực dân Pháp xâm lược Việt Nam.",
+          ],
+          answer: ["Trong cuộc khai thác thuộc địa lần thứ nhất của thực dân Pháp"],
+        },
+        {
+          id: 9,
+          type: "single",
+          title: "Điền từ còn thiếu vào chỗ trống: “Giai cấp công nhân Việt Nam thực hiện lãnh đạo cách mạng thông qua đội tiên phong của nó là (...)”",
+          options: [
+            "Mặt trận tổ quốc Việt Nam",
+            "Tổ chức công đoàn",
+            "Tổng liên đoàn lao động Việt Nam",
+            "Đảng Cộng sản Việt Nam",
+          ],
+          answer: ["Đảng Cộng sản Việt Nam"],
+        },
+        {
+          id: 10,
+          type: "single",
+          title: "Hạn chế cơ bản lớn nhất mà giai cấp công nhân Việt Nam hiện nay cần khắc phục là gì?",
+          options: [
+            "Hiệu quả lao động thấp",
+            "Tâm lý tiểu nông",
+            "Số lượng còn ít",
+            "Trình độ khoa học kỹ thuật chưa cao",
+          ],
+          answer: ["Tâm lý tiểu nông"],
+        },
+        {
+          id: 11,
+          type: "single",
+          title: "Điểm then chốt để giúp giai cấp công nhân Việt Nam hiện nay thực hiện thành công sứ mệnh lịch sử của mình là:",
+          options: [
+            "Coi trọng công tác xây dựng, chỉnh đốn Đảng",
+            "Phát triển giai cấp công nhân cả về số lượng và chất lượng",
+            "Trí thức hoá giai cấp công nhân",
+            "Xây dựng khối liên minh công – nông",
+          ],
+          answer: ["Coi trọng công tác xây dựng, chỉnh đốn Đảng"],
+        },
+        {
+          id: 12,
+          type: "single",
+          title: "Theo Ph. Ăngghen: “Thực hiện nhiệm vụ giải phóng thế giới ấy, đó là sứ mệnh lịch sử của........” Hãy chọn đáp án đúng điền vào chỗ trống?",
+          options: [
+            "Giai cấp tư sản",
+            "Giai cấp tiểu tư sản",
+            "Giai cấp nông dân",
+            "Giai cấp vô sản",
+          ],
+          answer: ["Giai cấp vô sản"],
+        },
+        {
+          id: 13,
+          type: "multi",
+          title: "Điều kiện chủ quan để giai cấp công nhân thực hiện được sứ mệnh lịch sử của mình là: (Chọn 2 đáp án đúng)",
+          options: [
+            "Không cần liên minh với các giai cấp, tầng lớp khác",
+            "Đảng Cộng sản",
+            "Sự phát triển của bản thân giai cấp công nhân cả về số lượng và chất lượng",
+            "Sở hữu toàn bộ tư liệu sản xuất trong xã hội",
+          ],
+          answer: [
+            "Đảng Cộng sản",
+            "Sự phát triển của bản thân giai cấp công nhân cả về số lượng và chất lượng",
+          ],
+        },
+        {
+          id: 14,
+          type: "multi",
+          title: "Đặc điểm nào sau đây thể hiện đúng bản chất của giai cấp công nhân? (Chọn 2 đáp án đúng)",
+          options: [
+            "Không sở hữu tư liệu sản xuất, sống bằng lao động làm thuê",
+            "Có trình độ học vấn thấp, chủ yếu làm việc tay chân",
+            "Luôn gắn bó với giai cấp địa chủ và tiểu thương",
+            "Có tính tổ chức và kỷ luật cao trong lao động sản xuất",
+          ],
+          answer: [
+            "Không sở hữu tư liệu sản xuất, sống bằng lao động làm thuê",
+            "Có tính tổ chức và kỷ luật cao trong lao động sản xuất",
+          ],
+        },
+        {
+          id: 15,
+          type: "multi",
+          title: "Giai cấp công nhân Việt Nam có đặc điểm gì khác với giai cấp công nhân ở các nước tư bản? (Chọn 2 đáp án đúng)",
+          options: [
+            "Không có sự gắn kết với các giai cấp, tầng lớp khác",
+            "Xuất thân từ nông dân là chủ yếu",
+            "Chịu sự bóc lót của thực dân và phong kiến",
+            "Sở hữu tư liệu sản xuất trong xã hội",
+          ],
+          answer: [
+            "Xuất thân từ nông dân là chủ yếu",
+            "Chịu sự bóc lót của thực dân và phong kiến",
+          ],
+        },
+        {
+          id: 16,
+          type: "single",
+          title: "Phát kiến nào của C.Mác và Ph.Ăngghen chỉ ra những hạn chế có tính lịch sử của chủ nghĩa xã hội không tưởng?",
+          options: [
+            "Học thuyết về sứ mệnh lịch sử toàn thế giới của giai cấp công nhân",
+            "Học thuyết về giá trị thặng dư",
+            "Chủ nghĩa duy vật biện chứng",
+            "Chủ nghĩa duy vật lịch sử",
+          ],
+          answer: [
+            "Học thuyết về sứ mệnh lịch sử toàn thế giới của giai cấp công nhân",
+          ],
+        },
+        {
+          id: 17,
+          type: "single",
+          title: "Đâu là nhân tố chủ quan quan trọng nhất để giai cấp công nhân thực hiện thắng lợi sứ mệnh lịch sử của mình?",
+          options: [
+            "Liên minh giai cấp công nhân với giai cấp nông dân",
+            "Sự phát triển của giai cấp công nhân về số lượng",
+            "Sự phát triển của giai cấp công nhân về chất lượng",
+            "Đảng Cộng sản",
+          ],
+          answer: ["Đảng Cộng sản"],
+        },
+        {
+          id: 18,
+          type: "single",
+          title: "Tìm ý đúng để hoàn thiện luận điểm sau: Cùng với sự phát triển của khoa học và công nghệ ngày càng hiện đại, giai cấp công nhân:",
+          options: [
+            "Tăng về số lượng và giảm về chất lượng",
+            "Giảm về số lượng và có trình độ sản xuất ngày càng cao",
+            "Tăng về số lượng và nâng cao về chất lượng",
+            "Giảm về số lượng và nâng cao về chất lượng.",
+          ],
+          answer: ["Tăng về số lượng và nâng cao về chất lượng"],
+        },
+        {
+          id: 19,
+          type: "single",
+          title: "Dấu hiệu đánh dấu sự trưởng thành vượt bậc của giai cấp công nhân với tư cách là giai cấp cách mạng là:",
+          options: [
+            "Sự trưởng thành về trình độ kỹ thuật",
+            "Sự trưởng thành về ý thức chính trị",
+            "Sự trưởng thành về trình độ nhận thức",
+            "Sự ra đời của Đảng Cộng sản",
+          ],
+          answer: ["Sự ra đời của Đảng Cộng sản"],
+        },
+        {
+          id: 20,
+          type: "single",
+          title: "Trong các nội dung sau đây thì nội dung nào thuộc về giải pháp xây dựng giai cấp công nhân Việt Nam hiện nay?",
+          options: [
+            "Xây dựng giai cấp công nhân tăng về số lượng và chất lượng",
+            "Coi trọng và giữ vững bản chất giai cấp công nhân và nguyên tắc sinh hoạt Đảng",
+            "Xây dựng giai cấp công nhân lớn mạnh, có giác ngộ giai cấp và chính trị vững vàng",
+            "Nâng cao nhận thức, kiên định quan điểm giai cấp công nhân là giai cấp lãnh đạo cách mạng thông qua đội tiền phong là Đảng Cộng sản Việt Nam",
+          ],
+          answer: [
+            "Nâng cao nhận thức, kiên định quan điểm giai cấp công nhân là giai cấp lãnh đạo cách mạng thông qua đội tiền phong là Đảng Cộng sản Việt Nam",
+          ],
+        },
+        {
+          id: 21,
+          type: "single",
+          title: "Vấn đề nổi bật nhất đối với việc thực hiện sứ mệnh lịch sử của giai cấp công nhân Việt Nam hiện nay là gì?",
+          options: [
+            "Tham gia xây dựng nền kinh tế thị trường định hướng xã hội chủ nghĩa",
+            "Lực lượng chủ đạo trong lao động",
+            "Phát huy vai trò và trách nhiệm của lực lượng đi đầu trong sự nghiệp đẩy mạnh công nghiệp hoá, hiện đại hoá đất nước",
+            "Nắm vững khoa học và công nghệ",
+          ],
+          answer: [
+            "Phát huy vai trò và trách nhiệm của lực lượng đi đầu trong sự nghiệp đẩy mạnh công nghiệp hoá, hiện đại hoá đất nước",
+          ],
+        },
+        {
+          id: 22,
+          type: "multi",
+          title: "Theo C.Mác và Ph.Ăngghen thì đặc điểm nổi bật của giai cấp công nhân là: (Chọn 2 đáp án đúng)",
+          options: [
+            "Giai cấp cách mạng và có tinh thần cách mạng triệt để",
+            "Lao động bằng phương thức công nghiệp",
+            "Có quyền sở hữu toàn bộ tư liệu sản xuất",
+            "Làm việc trong nông nghiệp, sử dụng công cụ thủ công",
+          ],
+          answer: [
+            "Giai cấp cách mạng và có tinh thần cách mạng triệt để",
+            "Lao động bằng phương thức công nghiệp",
+          ],
+        },
+        {
+          id: 23,
+          type: "single",
+          title: "Xét về phương thức lao động, phương thức sản xuất, giai cấp công nhân mang thuộc tính cơ bản nào?",
+          options: [
+            "Là giai cấp trực tiếp hay gián tiếp vận hành máy móc có tính chất công nghiệp ngày càng hiện đại",
+            "Là giai cấp tạo ra của cải vật chất làm giàu cho xã hội",
+            "Có số lượng đông nhất trong dân cư.",
+            "Giai cấp có tư liệu sản xuất nhiều nhất",
+          ],
+          answer: [
+            "Là giai cấp trực tiếp hay gián tiếp vận hành máy móc có tính chất công nghiệp ngày càng hiện đại",
+          ],
+        },
+        {
+          id: 24,
+          type: "single",
+          title: "Đặc điểm sứ mệnh lịch sử của giai cấp công nhân là:",
+          options: [
+            "Thay thế chế độ sở hữu tư nhân này bằng một chế độ sở hữu tư nhân khác",
+            "Thay thế chế độ công hữu này bằng một chế độ công hữu khác",
+            "Xóa bỏ triệt để chế độ tư hữu về tư liệu sản xuất",
+            "Thay thế chế độ chiếm hữu nô lệ bằng chế độ xã hội chủ nghĩa",
+          ],
+          answer: ["Xóa bỏ triệt để chế độ tư hữu về tư liệu sản xuất"],
+        },
+        {
+          id: 25,
+          type: "single",
+          title: "Nội dung trực tiếp về văn hoá tư tưởng thể hiện sứ mệnh lịch sử của giai cấp công nhân Việt Nam là:",
+          options: [
+            "Xây dựng hệ giá trị và con người Việt Nam",
+            "Xây dựng con người mới xã hội chủ nghĩa",
+            "Xây dựng nền giáo dục hiện đại",
+            "Xây dựng nền văn hoá Việt Nam tiên tiến, đậm đà bản sắc dân tộc",
+          ],
+          answer: [
+            "Xây dựng nền văn hoá Việt Nam tiên tiến, đậm đà bản sắc dân tộc",
+          ],
+        },
+        {
+          id: 26,
+          type: "single",
+          title: "Trong các nội dung sau đây thì nội dung nào thuộc về giải pháp xây dựng giai cấp công nhân Việt Nam hiện nay?",
+          options: [
+            "Thực hiện tốt chính sách và pháp luật đối với công nhân và người lao động.",
+            "Xây dựng giai cấp công nhân lớn mạnh, có giác ngộ giai cấp và chính trị vững vàng",
+            "Thực hiện chiến lược xây dựng giai cấp công nhân lớn mạnh, gắn kết chặt chẽ với chiến lược phát triển kinh tế - xã hội, công nghiệp hoá, hiện đại hoá đất nước, hội nhập quốc tế",
+            "Coi trọng và giữ vững bản chất giai cấp công nhân và nguyên tắc sinh hoạt Đảng",
+          ],
+          answer: [
+            "Thực hiện chiến lược xây dựng giai cấp công nhân lớn mạnh, gắn kết chặt chẽ với chiến lược phát triển kinh tế - xã hội, công nghiệp hoá, hiện đại hoá đất nước, hội nhập quốc tế",
+          ],
+        },
+        {
+          id: 27,
+          type: "multi",
+          title: "Giai cấp công nhân Việt Nam chủ yếu xuất thân từ tầng lớp nào? (Chọn 2 đáp án đúng)",
+          options: [
+            "Giai cấp nông dân bị tước đoạt hết ruộng đất",
+            "Tầng lớp địa chủ phong kiến",
+            "Thợ thủ công bị phá sản",
+            "Tầng lớp tư sản dân tộc",
+          ],
+          answer: [
+            "Giai cấp nông dân bị tước đoạt hết ruộng đất",
+            "Thợ thủ công bị phá sản",
+          ],
+        },
+        {
+          id: 28,
+          type: "single",
+          title: "Xét trong quan hệ sản xuất tư bản chủ nghĩa giai cấp công nhân là:",
+          options: [
+            "Giai cấp nghèo khổ nhất",
+            "Giai cấp không có tư liệu sản xuất, đi làm thuê cho nhà tư bản, bị nhà tư bản bóc lột giá trị thặng dư",
+            "Giai cấp tạo ra của cải cho xã hội",
+            "Giai cấp có số lượng đông trong dân cư",
+          ],
+          answer: [
+            "Giai cấp không có tư liệu sản xuất, đi làm thuê cho nhà tư bản, bị nhà tư bản bóc lột giá trị thặng dư",
+          ],
+        },
+        {
+          id: 29,
+          type: "multi",
+          title: "Trong thời kỳ thuộc địa, giai cấp công nhân Việt Nam chủ yếu làm việc trong: (Chọn 2 đáp án đúng)",
+          options: [
+            "Xí nghiệp thủ công truyền thống",
+            "Hợp tác xã nông nghiệp",
+            "Đồn điền cao su",
+            "Nhà máy, hầm mỏ do thực dân Pháp xây dựng",
+          ],
+          answer: [
+            "Đồn điền cao su",
+            "Nhà máy, hầm mỏ do thực dân Pháp xây dựng",
+          ],
+        },
+        {
+          id: 30,
+          type: "multi",
+          title: "Chủ nghĩa xã hội khoa học ra đời dựa trên cơ sở của những tiền đề nào? (Chọn 2 đáp án đúng)",
+          options: [
+            "Tiền đề khoa học tự nhiên",
+            "Tiền đề khoa học lịch sử",
+            "Tiền đề tư tưởng lý luận",
+            "Tiền đề khoa học xã hội",
+          ],
+          answer: [
+            "Tiền đề khoa học tự nhiên",
+            "Tiền đề tư tưởng lý luận",
+          ],
+        },
+        {
+          id: 31,
+          type: "multi",
+          title: "Nội dung sứ mệnh lịch sử của giai cấp công nhân Việt Nam hiện nay bao gồm: (Chọn 3 đáp án đúng)",
+          options: [
+            "Nội dung chính trị - xã hội",
+            "Nội dung lý luận",
+            "Nội dung kinh tế",
+            "Nội dung văn hóa, tư tưởng",
+          ],
+          answer: [
+            "Nội dung chính trị - xã hội",
+            "Nội dung kinh tế",
+            "Nội dung văn hóa, tư tưởng",
+          ],
+        },
+        {
+          id: 32,
+          type: "single",
+          title: "Câu nói sau đây được viết trong tác phẩm nào: \"Giai cấp tư sản, trong quá trình thống trị giai cấp chưa đầy một thế kỷ, đã tạo ra những lực lượng sản xuất nhiều hơn và đồ sộ hơn lực lượng sản xuất của tất cả các thế hệ trước gộp lại\"?",
+          options: [
+            "Chống Đuyrinh",
+            "Bộ Tư bản",
+            "Tuyên ngôn của Đảng Cộng sản",
+            "Ba nguồn gốc và ba bộ phận cấu thành của chủ nghĩa Mác",
+          ],
+          answer: ["Tuyên ngôn của Đảng Cộng sản"],
+        },
+        {
+          id: 33,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1) Giai cấp công nhân đại diện cho phương thức sản xuất tiên tiến và lực lượng sản xuất hiện đại.",
+              answer: true,
+            },
+            {
+              text: "2) Giai cấp công nhân Việt Nam hiện nay đã tăng cả về số lượng và chất lượng.",
+              answer: true,
+            },
+            {
+              text: "3) Đảng Cộng sản là nhân tố khách quan quan trọng nhất để giai cấp công nhân thực hiện thắng lợi sứ mệnh lịch sử của mình.",
+              answer: false,
+            },
+            {
+              text: "4) Sự trưởng thành của Đảng Cộng sản – Hạt nhân chính trị quan trọng của giai cấp công nhân.",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 34,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1) Giai cấp công nhân Việt Nam không có sự liên kết với các lực lượng cách mạng khác",
+              answer: false,
+            },
+            {
+              text: "2) Giai cấp công nhân Việt Nam hiện nay đa dạng về cơ cấu nghề nghiệp, có mặt trong mọi thành phần kinh tế",
+              answer: true,
+            },
+            {
+              text: "3) Giai cấp công nhân Việt Nam là tầng lớp giàu có, ít chịu áp bức bóc lột.",
+              answer: false,
+            },
+            {
+              text: "4) Giai cấp công nhân Việt Nam hiện nay đã tăng nhanh về số lượng và chất lượng",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 35,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1) Giai cấp công nhân Việt Nam hiện nay đã tăng nhanh về số lượng và giảm về chất lượng.",
+              answer: false,
+            },
+            {
+              text: "2) Giai cấp công nhân Việt Nam gắn bó mật thiết với các tầng lớp nhân dân trong xã hội.",
+              answer: true,
+            },
+            {
+              text: "3) Giai cấp công nhân Việt Nam là lực lượng nòng cốt của Đảng Cộng sản Việt Nam.",
+              answer: true,
+            },
+            {
+              text: "4) Giai cấp công nhân phát huy vai trò và trách nhiệm của lực lượng đi đầu trong sự nghiệp đẩy mạnh công nghiệp hóa, hiện đại hóa đất nước.",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 36,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1) Sự trưởng thành của Đảng Cộng sản – Hạt nhân chính trị quan trọng của giai cấp công nhân.",
+              answer: true,
+            },
+            {
+              text: "2) Giai cấp công nhân Việt Nam hiện nay đã tăng cả về số lượng và chất lượng.",
+              answer: true,
+            },
+            {
+              text: "3) Đảng Cộng sản là nhân tố khách quan quan trọng nhất để giai cấp công nhân thực hiện thắng lợi sứ mệnh lịch sử của mình.",
+              answer: false,
+            },
+            {
+              text: "4) Giai cấp công nhân đại diện cho phương thức sản xuất tiên tiến và lực lượng sản xuất hiện đại.",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 37,
+          type: "tfset",
+          title: "Chọn Đúng hoặc Sai với từng phát biểu:",
+          statements: [
+            {
+              text: "1. Giai cấp công nhân là chủ thể của quá trình sản xuất vật chất hiện đại.",
+              answer: true,
+            },
+            {
+              text: "2. Đặc điểm nổi bật của giai cấp công nhân là lao động bằng phương thức nông nghiệp.",
+              answer: false,
+            },
+            {
+              text: "3. Giai cấp công nhân là giai cấp cách mạng và có tinh thần cách mạng triệt để.",
+              answer: true,
+            },
+            {
+              text: "4. Giai cấp công nhân là những người lao động trực tiếp hay gián tiếp vận hành các công cụ sản xuất có tính chất công nghiệp ngày càng hiện đại và xã hội hóa cao.",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 38,
+          type: "drag_groups",
+          title: "Kéo thả các yếu tố sau đây vào cột tương ứng:",
+          groups: {
+            "Điều kiện khách quan": [
+              "Địa vị kinh tế của giai cấp công nhân",
+              "Địa vị chính trị - xã hội của giai cấp công nhân",
+            ],
+            "Điều kiện chủ quan": [
+              "Sự phát triển của bản thân giai cấp công nhân cả về số lượng và chất lượng",
+              "Đảng Cộng sản",
+            ],
+          },
+          items: [
+            "Địa vị kinh tế của giai cấp công nhân",
+            "Địa vị chính trị - xã hội của giai cấp công nhân",
+            "Sự phát triển của bản thân giai cấp công nhân cả về số lượng và chất lượng",
+            "Đảng Cộng sản",
+          ],
+        },
+        {
+          id: 39,
+          type: "drag_groups",
+          title: "Kéo thả các đáp án khớp với các phát biểu:",
+          groups: {
+            "Giai cấp công nhân Việt Nam là lực lượng nòng cốt của": [
+              "Đảng Cộng Sản",
+            ],
+            "Giai cấp công nhân Việt Nam gắn bó mật thiết với các": [
+              "tầng lớp nhân dân",
+            ],
+            "Giai cấp công nhân Việt Nam có mối quan hệ mật thiết với giai cấp nông dân và": [
+              "tầng lớp tri thức",
+            ],
+          },
+          items: [
+            "Đảng Cộng Sản",
+            "tầng lớp nhân dân",
+            "tầng lớp tri thức",
+          ],
+        },
+        {
+          id: 40,
+          type: "drag_groups",
+          title: "Kéo thả các đáp án khớp với các phát biểu:",
+          groups: {
+            "Đảng Cộng sản là": ["nhân tố chủ quan"],
+            "Giai cấp công nhân là ___ của quá trình sản xuất vật chất hiện đại": [
+              "chủ thể",
+            ],
+            "Giai cấp công nhân đại diện cho ___ tiên tiến": [
+              "phương thức sản xuất",
+            ],
+            "Giai cấp công nhân đại diện cho ___ hiện đại": [
+              "lực lượng sản xuất",
+            ],
+          },
+          items: [
+            "nhân tố chủ quan",
+            "chủ thể",
+            "phương thức sản xuất",
+            "lực lượng sản xuất",
+          ],
+        },
+        {
+          id: 41,
+          type: "drag_groups",
+          title: "Kéo thả các đáp án khớp với các phát biểu:",
+          groups: {
+            "Giai cấp công nhân là ____ và có tinh thần cách mạng triệt để": [
+              "giai cấp cách mạng",
+            ],
+            "Sứ mệnh lịch sử của giai cấp công nhân là_____ khỏi áp bức, bất công, bóc lột": [
+              "giải phóng con người",
+            ],
+            "Thực hiện sự nghiệp giải phóng thế giới ấy, đó là sứ mệnh lịch sử của ____ hiện đại": [
+              "giai cấp vô sản",
+            ],
+          },
+          items: [
+            "giai cấp cách mạng",
+            "giải phóng con người",
+            "giai cấp vô sản",
+          ],
+        },
+      ];
+
+      let WORK = [];
+      function reset(shuffleAll = true) {
+        WORK = clone(BANK);
+        if (shuffleAll) WORK = shuffle(WORK);
+        WORK.forEach((q) => {
+          if (q.options) q.options = shuffle(q.options);
+          if (q.type === "drag_pairs") {
+            const entries = Object.entries(q.pairs);
+            q.__left = shuffle(entries.map(([k]) => k));
+            q.__right = shuffle(entries.map(([_, v]) => v));
+            q.__extras = q.extras ? shuffle(q.extras) : [];
+          }
+          if (q.type === "drag_groups") {
+            q.__items = shuffle(q.items);
+            q.__groupNames = Object.keys(q.groups);
+          }
+        });
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function render() {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        document.getElementById("meta").textContent = `${WORK.length} câu`;
+        WORK.forEach((q, qi) => {
+          const card = el("div", { class: "card", id: `q_${qi}` });
+          const head = el("div", { class: "qhead" });
+          head.append(el("div", { class: "qidx" }, String(qi + 1)));
+          const title = el("div", { class: "qtitle" }, q.title);
+          if (q.type === "multi")
+            title.append(el("div", { class: "hint" }, "(Chọn nhiều)"));
+          if (q.type === "tfset")
+            title.append(el("div", { class: "hint" }, "(Đúng / Sai)"));
+          if (q.type.includes("drag"))
+            title.append(el("div", { class: "hint" }, "(Kéo thả)"));
+          head.append(title);
+          card.append(head);
+          const body = el("div", { class: "answers" });
+
+          if (q.type === "single" || q.type === "multi") {
+            q.options.forEach((opt) => {
+              const id = `q${qi}_${safeId(opt)}`;
+              const lab = el("label");
+              const ipt = el("input", {
+                type: q.type === "single" ? "radio" : "checkbox",
+                name: `q${qi}`,
+                value: opt,
+                id,
+              });
+              lab.append(ipt, el("span", {}, opt));
+              body.append(lab);
+            });
+          }
+          if (q.type === "tfset") {
+            q.statements.forEach((st, si) => {
+              const row = el("div", { class: "tf-item" });
+              row.append(el("div", {}, st.text));
+              const ch = el("div", { class: "tf-row" });
+              ["Đúng", "Sai"].forEach((v) => {
+                const lab = el("label");
+                const ipt = el("input", {
+                  type: "radio",
+                  name: `q${qi}_s${si}`,
+                  value: v,
+                });
+                lab.append(ipt, el("span", {}, v));
+                ch.append(lab);
+              });
+              row.append(ch);
+              body.append(row);
+            });
+          }
+          if (q.type === "drag_pairs") {
+            const wrap = el("div", { class: "dragwrap" });
+            const zones = el("div", { class: "dragzone" });
+            q.__right.forEach((r) => {
+              const z = el("div", { class: "zone", dataset: { target: r } });
+              z.append(el("h4", {}, r), el("div", { class: "droparea" }));
+              zones.append(z);
+            });
+            wrap.append(zones);
+            const pool = el("div", { class: "pool" });
+            [...q.__left, ...(q.__extras || [])].forEach((l) => {
+              pool.append(
+                el(
+                  "div",
+                  { class: "pill", draggable: true, dataset: { txt: l } },
+                  l,
+                ),
+              );
+            });
+            wrap.append(pool);
+            body.append(wrap);
+          }
+          if (q.type === "drag_groups") {
+            const wrap = el("div", { class: "dragwrap" });
+            const zones = el("div", { class: "dragzone" });
+            q.__groupNames.forEach((g) => {
+              const z = el("div", { class: "zone", dataset: { gname: g } });
+              z.append(el("h4", {}, g), el("div", { class: "droparea" }));
+              zones.append(z);
+            });
+            wrap.append(zones);
+            const pool = el("div", { class: "pool" });
+            q.__items.forEach((item) => {
+              pool.append(
+                el(
+                  "div",
+                  { class: "pill", draggable: true, dataset: { txt: item } },
+                  item,
+                ),
+              );
+            });
+            wrap.append(pool);
+            body.append(wrap);
+          }
+          card.append(body, el("div", { class: "result", id: `res_${qi}` }));
+          list.append(card);
+        });
+        enableDragDrop();
+      }
+
+      function enableDragDrop() {
+        document.querySelectorAll(".pill").forEach((p) => {
+          p.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", p.dataset.txt);
+          });
+        });
+        document.querySelectorAll(".droparea,.pool").forEach((area) => {
+          area.addEventListener("dragover", (e) => e.preventDefault());
+          area.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const txt = e.dataTransfer.getData("text/plain");
+            if (!txt) return;
+            const old = document.querySelector(
+              `.pill[data-txt="${CSS.escape(txt)}"]`,
+            );
+            if (old) old.remove();
+            const pill = el(
+              "div",
+              { class: "pill", draggable: true, dataset: { txt } },
+              txt,
+            );
+            pill.addEventListener("dragstart", (ev) =>
+              ev.dataTransfer.setData("text/plain", txt),
+            );
+            area.append(pill);
+          });
+        });
+      }
+
+      function getUserAnswer(q, qi) {
+        if (q.type === "single" || q.type === "multi") {
+          return Array.from(
+            document.querySelectorAll(`#q_${qi} input:checked`),
+          ).map((x) => x.value);
+        }
+        if (q.type === "tfset") {
+          return q.statements.map((st, si) => {
+            const inp = document.querySelector(
+              `input[name="q${qi}_s${si}"]:checked`,
+            );
+            return inp ? inp.value === "Đúng" : null;
+          });
+        }
+        if (q.type === "drag_pairs") {
+          const ans = {};
+          document.querySelectorAll(`#q_${qi} .zone`).forEach((z) => {
+            const target = z.dataset.target;
+            const pill = z.querySelector(".pill");
+            if (pill) ans[pill.dataset.txt] = target;
+          });
+          return ans;
+        }
+        if (q.type === "drag_groups") {
+          const ans = {};
+          document.querySelectorAll(`#q_${qi} .zone`).forEach((z) => {
+            const gname = z.dataset.gname;
+            ans[gname] = Array.from(z.querySelectorAll(".pill")).map(
+              (p) => p.dataset.txt,
+            );
+          });
+          return ans;
+        }
+        return null;
+      }
+
+      function isCorrect(q, ans) {
+        if (!ans) return false;
+        if (q.type === "single" || q.type === "multi") {
+          return (
+            ans.length === q.answer.length &&
+            ans.every((a) => q.answer.includes(a))
+          );
+        }
+        if (q.type === "tfset") {
+          return ans.every((a, i) => a === q.statements[i].answer);
+        }
+        if (q.type === "drag_pairs") {
+          return Object.entries(q.pairs).every(([l, r]) => ans[l] === r);
+        }
+        if (q.type === "drag_groups") {
+          return Object.entries(q.groups).every(([g, arr]) =>
+            arr.every((item) => ans[g] && ans[g].includes(item)),
+          );
+        }
+        return false;
+      }
+
+      function showKey(q, qi) {
+        const res = document.getElementById(`res_${qi}`);
+        res.innerHTML = "";
+        if (q.type === "single" || q.type === "multi")
+          res.innerHTML = `<div class="hint">Đáp án: <b>${q.answer.join(
+            ", ",
+          )}</b></div>`;
+        if (q.type === "tfset")
+          res.innerHTML = `<div class="hint">Đáp án: <b>${q.statements
+            .map((s) => (s.answer ? "Đúng" : "Sai"))
+            .join(" · ")}</b></div>`;
+        if (q.type === "drag_pairs")
+          res.innerHTML = `<div class="hint">Đáp án:<br><b>${Object.entries(
+            q.pairs,
+          )
+            .map(([l, r]) => `${l} → ${r}`)
+            .join("<br>")}</b></div>`;
+        if (q.type === "drag_groups")
+          res.innerHTML = `<div class="hint">Đáp án:<br><b>${Object.entries(
+            q.groups,
+          )
+            .map(([g, a]) => `${g}: ${a.join(", ")}`)
+            .join("<br>")}</b></div>`;
+      }
+
+      function checkAll() {
+        let correct = 0;
+        WORK.forEach((q, qi) => {
+          const res = document.getElementById(`res_${qi}`);
+          const user = getUserAnswer(q, qi);
+          if (isCorrect(q, user)) {
+            correct++;
+            res.textContent = "✔ Đúng";
+            res.className = "result r-good";
+          } else {
+            res.textContent = "✘ Sai";
+            res.className = "result r-bad";
+          }
+        });
+        document.getElementById("meta").textContent =
+          `${correct}/${WORK.length} đúng`;
+      }
+
+      document.getElementById("btnCheck").addEventListener("click", checkAll);
+      document
+        .getElementById("btnReset")
+        .addEventListener("click", () => reset(true));
+      let keyVisible = false;
+      document.getElementById("btnToggleKey").addEventListener("click", () => {
+        keyVisible = !keyVisible;
+        WORK.forEach((q, qi) => {
+          if (keyVisible) showKey(q, qi);
+          else {
+            const r = document.getElementById(`res_${qi}`);
+            r.textContent = "";
+            r.className = "result";
+          }
+        });
+      });
+
+      reset(true);
+    </script>
+  </body>
+</html>

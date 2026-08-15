@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chủ Nghĩa Xã Hội - Thời Kỳ Quá Độ</title>
+    <style>
+      :root {
+        --bg1: #89f7fe;
+        --bg2: #66a6ff;
+        --card: #ffffff;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --good: #16a34a;
+        --bad: #dc2626;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(135deg, var(--bg1), var(--bg2));
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(22px, 3vw, 30px);
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button {
+        border: none;
+        padding: 10px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        background: var(--accent);
+        color: #fff;
+      }
+      button.secondary {
+        background: #111827;
+      }
+      button.ghost {
+        background: #fff;
+        color: #111827;
+        border: 1px solid #ddd;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+      .qhead {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .qidx {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #fff;
+        background: #111827;
+      }
+      .qtitle {
+        font-weight: 700;
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .answers {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .answers label {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        cursor: pointer;
+        background: #fff;
+      }
+      .answers input {
+        width: 18px;
+        height: 18px;
+      }
+      .tf-item {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        background: #fff;
+        margin-bottom: 8px;
+      }
+      .tf-row {
+        margin-top: 6px;
+        display: flex;
+        gap: 16px;
+      }
+      .dragwrap {
+        display: grid;
+        gap: 12px;
+      }
+      .dragzone {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .zone {
+        min-height: 64px;
+        border: 2px dashed #aaa;
+        border-radius: 14px;
+        padding: 10px;
+        background: #fafafa;
+      }
+      .pill {
+        background: #eef2ff;
+        border: 1px solid #99c;
+        border-radius: 999px;
+        padding: 8px 12px;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        font-weight: 600;
+        user-select: none;
+        cursor: grab;
+        margin: 4px;
+      }
+      .pool,
+      .droparea {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 40px;
+      }
+      .result {
+        margin-top: 12px;
+        font-weight: 700;
+      }
+      .r-good {
+        color: var(--good);
+      }
+      .r-bad {
+        color: var(--bad);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1>Chủ Nghĩa Xã Hội & Thời Kỳ Quá Độ</h1>
+        <div class="toolbar">
+          <button id="btnCheck">Xem kết quả</button>
+          <button class="secondary" id="btnReset">Làm lại & đảo câu</button>
+          <button class="ghost" id="btnToggleKey">Hiện/ẩn đáp án đúng</button>
+          <div class="meta" id="meta">0/0 câu</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap"><div id="list" class="cards"></div></main>
+    <script>
+      const clone = (x) => JSON.parse(JSON.stringify(x));
+      const shuffle = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+      const el = (tag, attrs = {}, html = "") => {
+        const e = document.createElement(tag);
+        Object.entries(attrs).forEach(([k, v]) => {
+          if (k === "class") e.className = v;
+          else if (k === "dataset") Object.assign(e.dataset, v);
+          else e.setAttribute(k, v);
+        });
+        if (html) e.innerHTML = html;
+        return e;
+      };
+      const safeId = (str) =>
+        "id_" +
+        str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9]/g, "_");
+
+      const BANK = [
+        {
+          id: 1,
+          type: "single",
+          title: "Theo C. Mác và Ph. Ăngghen thì giai đoạn đầu của hình thái kinh tế – xã hội cộng sản chủ nghĩa là gì?",
+          options: [
+            "Chủ nghĩa cộng sản",
+            "Thời kỳ quá độ",
+            "Cộng sản chủ nghĩa",
+            "Chủ nghĩa xã hội",
+          ],
+          answer: ["Chủ nghĩa xã hội"],
+        },
+        {
+          id: 2,
+          type: "single",
+          title: "Chủ nghĩa xã hội có mấy đặc trưng cơ bản?",
+          options: ["8", "5", "6", "7"],
+          answer: ["6"],
+        },
+        {
+          id: 3,
+          type: "single",
+          title: "Hình thái kinh tế – xã hội cộng sản chủ nghĩa bắt đầu và hoàn thiện khi nào?",
+          options: [
+            "Bắt đầu từ khi Đảng Cộng sản ra đời và xây dựng xong chủ nghĩa xã hội.",
+            "Bắt đầu từ thời kỳ quá độ và hoàn thiện ở giai đoạn thấp của xã hội cộng sản.",
+            "Bắt đầu từ thời kỳ quá độ cho đến khi xây dựng xong giai đoạn cao của xã hội cộng sản.",
+            "Bắt đầu từ giai đoạn thấp của xã hội cộng sản và hoàn thiện ở giai đoạn cao của xã hội cộng sản.",
+          ],
+          answer: [
+            "Bắt đầu từ thời kỳ quá độ cho đến khi xây dựng xong giai đoạn cao của xã hội cộng sản.",
+          ],
+        },
+        {
+          id: 4,
+          type: "single",
+          title: "Đặc trưng về kinh tế của chủ nghĩa xã hội là gì?",
+          options: [
+            "Có nền kinh tế phát triển cao dựa trên lực lượng sản xuất hiện đại.",
+            "Có nền kinh tế phát triển cao dựa trên lực lượng sản xuất hiện đại và chế độ tư hữu về tư liệu sản xuất.",
+            "Có nền kinh tế phát triển cao dựa trên lực lượng sản xuất hiện đại và chế độ công hữu về tư liệu sản xuất.",
+            "Có nền kinh tế phát triển cao.",
+          ],
+          answer: [
+            "Có nền kinh tế phát triển cao dựa trên lực lượng sản xuất hiện đại và chế độ công hữu về tư liệu sản xuất.",
+          ],
+        },
+        {
+          id: 5,
+          type: "single",
+          title: "Nguyên nhân sâu xa dẫn đến sự thay thế hình thái kinh tế – xã hội tư bản chủ nghĩa bằng hình thái kinh tế – xã hội cộng sản chủ nghĩa là gì?",
+          options: [
+            "Mâu thuẫn giữa lực lượng sản xuất mang tính xã hội hóa ngày càng cao với quan hệ sản xuất tư bản chủ nghĩa dựa trên chế độ chiếm hữu tư nhân tư bản chủ nghĩa về tư liệu sản xuất chủ yếu.",
+            "Mâu thuẫn giữa phương thức sản xuất tư bản chủ nghĩa và phương thức sản xuất xã hội chủ nghĩa dựa trên chế độ chiếm hữu tư nhân tư bản chủ nghĩa về tư liệu sản xuất chủ yếu.",
+            "Mâu thuẫn giữa lực lượng sản xuất và tư liệu sản xuất dựa trên chế độ chiếm hữu tư nhân tư bản chủ nghĩa.",
+            "Mâu thuẫn giữa các giai cấp, tầng lớp trong xã hội dựa trên chế độ chiếm hữu tư nhân tư bản chủ nghĩa về tư liệu sản xuất chủ yếu.",
+          ],
+          answer: [
+            "Mâu thuẫn giữa lực lượng sản xuất mang tính xã hội hóa ngày càng cao với quan hệ sản xuất tư bản chủ nghĩa dựa trên chế độ chiếm hữu tư nhân tư bản chủ nghĩa về tư liệu sản xuất chủ yếu.",
+          ],
+        },
+        {
+          id: 6,
+          type: "single",
+          title: "Chọn cụm từ còn thiếu điền vào dấu “…”: “Giữa xã hội tư bản chủ nghĩa và xã hội cộng sản chủ nghĩa là một thời kỳ … từ xã hội nọ sang xã hội kia” (C. Mác).",
+          options: [
+            "Đột phá cách mạng",
+            "Cách mạng",
+            "Cải biến cách mạng",
+            "Quá độ",
+          ],
+          answer: ["Cải biến cách mạng"],
+        },
+        {
+          id: 7,
+          type: "single",
+          title: "Kiểu quá độ lên chủ nghĩa xã hội ở Việt Nam là kiểu quá độ nào?",
+          options: [
+            "Quá độ trực tiếp",
+            "Quá độ chủ quan",
+            "Quá độ khách quan",
+            "Quá độ gián tiếp",
+          ],
+          answer: ["Quá độ gián tiếp"],
+        },
+        {
+          id: 8,
+          type: "single",
+          title: "Cương lĩnh xây dựng đất nước trong thời kỳ quá độ lên chủ nghĩa xã hội (Bổ sung và phát triển năm 2011) được Đảng ta thông qua ở Đại hội lần thứ mấy?",
+          options: ["Đại hội XI", "Đại hội X", "Đại hội IX", "Đại hội XII"],
+          answer: ["Đại hội XI"],
+        },
+        {
+          id: 9,
+          type: "single",
+          title: "Tìm đáp án sai. Đặc trưng bản chất của chủ nghĩa xã hội Việt Nam theo tinh thần của Đại hội XI:",
+          options: [
+            "Quyền lực thuộc về giai cấp công nhân",
+            "Con người có cuộc sống ấm no, tự do, hạnh phúc, có điều kiện phát triển toàn diện",
+            "Có nền văn hóa tiên tiến đậm đà bản sắc dân tộc",
+            "Có quan hệ hữu nghị và hợp tác với các nước trên thế giới",
+          ],
+          answer: ["Quyền lực thuộc về giai cấp công nhân"],
+        },
+        {
+          id: 10,
+          type: "single",
+          title: "Thời kỳ quá độ lên chủ nghĩa xã hội ở Việt Nam là bước quá độ:",
+          options: [
+            "Trực tiếp, từ chế độ phong kiến tiến lên chế độ xã hội chủ nghĩa.",
+            "Trực tiếp, từ chế độ tư bản chủ nghĩa lên chế độ xã hội chủ nghĩa.",
+            "Gián tiếp, bỏ qua chế độ tư bản chủ nghĩa tiến lên chủ nghĩa xã hội.",
+            "Gián tiếp, bỏ qua chế độ phong kiến tiến lên chế độ xã hội chủ nghĩa.",
+          ],
+          answer: [
+            "Gián tiếp, bỏ qua chế độ tư bản chủ nghĩa tiến lên chủ nghĩa xã hội.",
+          ],
+        },
+        {
+          id: 11,
+          type: "multi",
+          title: "Đặc điểm về chính trị trong thời kỳ quá độ được thể hiện ở điểm nào? (Chọn 2 đáp án đúng)",
+          options: [
+            "Thiết lập chuyên chính vô sản",
+            "Đa nguyên chính trị, đa đảng đối lập",
+            "Xây dựng nền dân chủ xã hội chủ nghĩa",
+            "Hoàn toàn không còn vai trò của nhà nước",
+          ],
+          answer: [
+            "Thiết lập chuyên chính vô sản",
+            "Xây dựng nền dân chủ xã hội chủ nghĩa",
+          ],
+        },
+        {
+          id: 12,
+          type: "multi",
+          title: "Đặc điểm nổi bật của thời kỳ quá độ lên chủ nghĩa xã hội ở Việt Nam là gì? (Chọn 2 đáp án đúng)",
+          options: [
+            "Từ một nền sản xuất nhỏ tiến lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa",
+            "Xây dựng nhà nước pháp quyền tư sản",
+            "Phát triển chủ nghĩa tư bản trong thời gian ngắn để tích lũy",
+            "Có sự lãnh đạo của Đảng Cộng sản Việt Nam",
+          ],
+          answer: [
+            "Từ một nền sản xuất nhỏ tiến lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa",
+            "Có sự lãnh đạo của Đảng Cộng sản Việt Nam",
+          ],
+        },
+        {
+          id: 13,
+          type: "single",
+          title: "Câu “Cần phải có thời kỳ quá độ khá lâu dài từ chủ nghĩa tư bản lên chủ nghĩa xã hội” là của ai?",
+          options: ["Ăngghen", "Heghen", "C.Mác", "Lênin"],
+          answer: ["Lênin"],
+        },
+        {
+          id: 14,
+          type: "single",
+          title: "Đặc điểm nổi bật của thời kỳ quá độ đó là:",
+          options: [
+            "Những yếu tố của xã hội mới đã phát triển, xoá bỏ hoàn toàn yếu tố của xã hội cũ.",
+            "Tàn dư của xã hội cũ còn tồn tại",
+            "Toàn bộ các yếu tố của xã hội bị triệt tiêu.",
+            "Những nhân tố của xã hội mới và những tàn tích của xã hội cũ tồn tại đan xen lẫn nhau, đấu tranh với nhau trên mọi lĩnh vực.",
+          ],
+          answer: [
+            "Những nhân tố của xã hội mới và những tàn tích của xã hội cũ tồn tại đan xen lẫn nhau, đấu tranh với nhau trên mọi lĩnh vực.",
+          ],
+        },
+        {
+          id: 15,
+          type: "single",
+          title: "Về nội dung, thời kỳ quá độ lên chủ nghĩa xã hội là thời kỳ cải tạo cách mạng sâu sắc, triệt để xã hội tư bản chủ nghĩa trên các lĩnh vực:",
+          options: [
+            "Chủ yếu về văn hóa",
+            "Chủ yếu về chính trị",
+            "Chủ yếu là chính trị.",
+            "Kinh tế, chính trị, văn hóa, xã hội",
+          ],
+          answer: ["Kinh tế, chính trị, văn hóa, xã hội"],
+        },
+        {
+          id: 16,
+          type: "single",
+          title: "Phát triển bỏ qua chế độ tư bản chủ nghĩa ở Việt Nam được hiểu như thế nào?",
+          options: [
+            "Bỏ qua sự phát triển của lực lượng sản xuất tư bản chủ nghĩa",
+            "Bỏ qua các yếu tố gắn với phương thức sản xuất tư bản chủ nghĩa",
+            "Không xây dựng quan hệ sản xuất tư bản chủ nghĩa",
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất va kiến trúc thượng tang tư bản chủ nghĩa",
+          ],
+          answer: [
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất va kiến trúc thượng tang tư bản chủ nghĩa",
+          ],
+        },
+        {
+          id: 17,
+          type: "single",
+          title: "Chọn từ đúng điền vào chỗ trống để hoàn thành mục tiêu của Đảng xác định trong thời kỳ quá độ lên chủ nghĩa xã hội ở nước ta: Độc lập dân tộc gắn liền với chủ nghĩa xã hội; dân giàu, nước mạnh, dân chủ, .... , văn minh",
+          options: ["Phát triển", "Công bằng", "Bình đắng", "Tiến bộ"],
+          answer: ["Công bằng"],
+        },
+        {
+          id: 18,
+          type: "single",
+          title: "Theo quan điểm của chủ nghĩa Mác - Lênin mốc bắt đầu của thời kỳ quá độ lên chủ nghĩa xã hội từ khi nào?",
+          options: [
+            "Khi giai cấp công nhân đấu tranh giành chính quyền",
+            "Khi giai cấp công nhân tiến hành cải tạo xã hội cũ và xây dựng xã hội mới",
+            "Khi giai cấp công nhân và nhân dân lao động tiến hành cải tạo xã hội cũ",
+            "Khi giai cấp công nhân và nhân dân lao động giành được chính quyền",
+          ],
+          answer: [
+            "Khi giai cấp công nhân và nhân dân lao động giành được chính quyền",
+          ],
+        },
+        {
+          id: 19,
+          type: "single",
+          title: "Đặc điểm của thời kỳ quá độ lên chủ nghĩa trên lĩnh vực kinh tế là gì?",
+          options: [
+            "Tồn tại giai cấp đối kháng",
+            "Tồn tại đấu tranh giai cấp",
+            "Tồn tại nhiều thành phần kinh tế",
+            "Tồn tại nhiểu tàn dư văn hóa của chế độ cũ",
+          ],
+          answer: ["Tồn tại nhiều thành phần kinh tế"],
+        },
+        {
+          id: 20,
+          type: "single",
+          title: "Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa ở nước ta, được hiểu là:",
+          options: [
+            "Bỏ qua việc xác lập vị trí thống trị của kiến trúc thượng tầng tư bản chủ nghĩa nhưng không kế thừa những thành tựu mà nhân loại đã đạt được dưới chế độ tư bản chủ nghĩa",
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất tư bản chủ nghĩa nhưng kế thừa những thành tựu mà nhân loại đã đạt được dưới chế độ tư bản chủ nghĩa",
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa nhưng không kế thừa những thành tựu mà nhân loại đã đạt được dưới chế độ tư bản chủ nghĩa",
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa, nhưng tiếp thu, kế thừa những thành tựu mà nhân loại đã đạt được dưới chế độ tư bản chủ nghĩa",
+          ],
+          answer: [
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa, nhưng tiếp thu, kế thừa những thành tựu mà nhân loại đã đạt được dưới chế độ tư bản chủ nghĩa",
+          ],
+        },
+        {
+          id: 21,
+          type: "single",
+          title: "Trong cuốn sách “Một số vấn đề lý luận và thực tiễn về chủ nghĩa xã hội và con đường đi lên chủ nghĩa xã hội ở Việt Nam\", Tổng Bí thư Nguyễn Phú Trọng khẳng định: đường lối cơ bản, xuyên suốt của cách mạng Việt Nam và cũng là điểm cốt yếu trong di sản tư tưởng của Chủ tịch Hồ Chí Minh là:",
+          options: [
+            "Phát triển kinh tế thị trường định hướng xã hội chủ nghĩa",
+            "Chủ nghĩa xã hội và giải phóng giai cấp vô sản",
+            "Độc lập dân tộc gắn liền với chủ nghĩa xã hội",
+            "Độc lập dân tộc gắn liền với hội nhập kinh tế quốc tế",
+          ],
+          answer: ["Độc lập dân tộc gắn liền với chủ nghĩa xã hội"],
+        },
+        {
+          id: 22,
+          type: "single",
+          title: "Chọn phương án sai:",
+          options: [
+            "Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa nhưng có sự tiếp thu, kế thừa toàn bộ các lĩnh vực đã tạo ra dưới chế độ tư bản chủ nghĩa",
+            "Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa tức là bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa",
+            "Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa là con đường cách mạng tất yếu chủ quan, con đường xây dựng đất nước trong thời kỳ quá độ lên chủ nghĩa xã hội",
+            "Con đường đi lên chủ nghĩa xã hội của nước ta là sự phát triển quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa",
+          ],
+          answer: [
+            "Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa là con đường cách mạng tất yếu chủ quan, con đường xây dựng đất nước trong thời kỳ quá độ lên chủ nghĩa xã hội",
+          ],
+        },
+        {
+          id: 23,
+          type: "single",
+          title: "Tại sao cho rằng con đường cách mạng Việt Nam là quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa là một tất yếu?",
+          options: [
+            "Vì nó phù hợp với đặc điểm của đất nước và xu thế phát triển của thời đại",
+            "Vì không cần tiếp thu thành tựu khoa học, kỹ thuật dưới chế độ tư bản chủ nghĩa",
+            "Vì sự phát triển của lực lượng sản xuất ngày càng cao",
+            "Vì không cần tạo ra sự biến đổi về chất trên tất cả các lĩnh vực",
+          ],
+          answer: [
+            "Vì nó phù hợp với đặc điểm của đất nước và xu thế phát triển của thời đại",
+          ],
+        },
+        {
+          id: 24,
+          type: "single",
+          title: "Căn cứ vào giáo trình Chủ nghĩa xã hội khoa học, hãy xác định khái niệm dùng để chỉ một chế độ xã hội tốt đẹp, giai đoạn đầu của hình thái kinh tế - xã hội cộng sản chủ nghĩa",
+          options: [
+            "Thời kỳ quá độ lên chủ nghĩa xã hội",
+            "Chủ nghĩa xã hội",
+            "Chủ nghĩa cộng sản",
+            "Thời kỳ quá độ",
+          ],
+          answer: ["Chủ nghĩa xã hội"],
+        },
+        {
+          id: 25,
+          type: "single",
+          title: "Theo chủ nghĩa Mác – Lênin có mấy hình thức quá độ lên chủ nghĩa xã hội?",
+          options: ["3", "1", "2", "4"],
+          answer: ["2"],
+        },
+        {
+          id: 26,
+          type: "multi",
+          title: "Thời kỳ quá độ lên chủ nghĩa xã hội có những mâu thuẫn nào cần giải quyết? (Chọn 2 đáp án đúng)",
+          options: [
+            "Mâu thuẫn giữa cái cũ và cái mới trong xã hội",
+            "Mâu thuẫn giữa các tầng lớp lao động và tư sản hoàn toàn biến mất.",
+            "Mâu thuẫn giữa năng suất lao động và nhu cầu phát triển xã hội.",
+            "Mâu thuẫn giữa các thành phần kinh tế khác nhau trong xã hội",
+          ],
+          answer: [
+            "Mâu thuẫn giữa cái cũ và cái mới trong xã hội",
+            "Mâu thuẫn giữa các thành phần kinh tế khác nhau trong xã hội",
+          ],
+        },
+        {
+          id: 27,
+          type: "multi",
+          title: "Việc \"bỏ qua chế độ tư bản chủ nghĩa\" ở Việt Nam có nghĩa là: (Chọn 2 đáp án đúng)",
+          options: [
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa",
+            "Tiếp thu, kế thừa những thành tựu nhân loại đã đạt được dưới chủ nghĩa tư bản",
+            "Tăng cường sở hữu tư nhân để phát triển lực lượng sản xuất",
+            "Loại bỏ hoàn toàn tất cả yếu tố tư bản trong nền kinh tế",
+          ],
+          answer: [
+            "Bỏ qua việc xác lập vị trí thống trị của quan hệ sản xuất và kiến trúc thượng tầng tư bản chủ nghĩa",
+            "Tiếp thu, kế thừa những thành tựu nhân loại đã đạt được dưới chủ nghĩa tư bản",
+          ],
+        },
+        {
+          id: 28,
+          type: "multi",
+          title: "Đặc điểm về kinh tế của thời kỳ quá độ lên chủ nghĩa xã hội gồm: (Chọn 2 đáp án đúng)",
+          options: [
+            "Có những thành phần kinh tế đối lập nhau",
+            "Hoàn toàn không còn kinh tế tư nhân.",
+            "Chỉ có kinh tế nhà nước tồn tại và phát triển.",
+            "Tồn tại nền kinh tế nhiều thành phần",
+          ],
+          answer: [
+            "Có những thành phần kinh tế đối lập nhau",
+            "Tồn tại nền kinh tế nhiều thành phần",
+          ],
+        },
+        {
+          id: 29,
+          type: "single",
+          title: "Hãy chỉ ra luận điểm không chính xác:",
+          options: [
+            "Nhà nước trong thời kỳ quá độ lên chủ nghĩa xã hội là nền chuyên chính cách mạng của giai cấp công nhân",
+            "Giữa xã hội tư bản chủ nghĩa và xã hội xã hội chủ nghĩa là thời kỳ cải biến cách mạng lâu dài và phức tạp",
+            "Trong thời kỳ quá độ lên chủ nghĩa xã hội có thể và cần phải thủ tiêu mọi tàn tích của chủ nghĩa tư bản",
+            "Trong thời kỳ quá độ lên chủ nghĩa xã hội còn tồn tại nhiều tư tưởng – văn hoá cũ và mới đan xen, đấu tranh với nhau",
+          ],
+          answer: [
+            "Trong thời kỳ quá độ lên chủ nghĩa xã hội có thể và cần phải thủ tiêu mọi tàn tích của chủ nghĩa tư bản",
+          ],
+        },
+        {
+          id: 30,
+          type: "single",
+          title: "Cuộc cách mạng của giai cấp công nhân và nhân dân lao động dưới sự lãnh đạo của Đảng cộng sản chống lại giai cấp tư sản, là cuộc cách mạng:",
+          options: [
+            "Cách mạng dân chủ tư sản",
+            "Cách mạng tư sản",
+            "Cách mạng vô sản",
+            "Cách mạng xã hội",
+          ],
+          answer: ["Cách mạng vô sản"],
+        },
+        {
+          id: 31,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1. Trong thời kỳ quá độ từ chủ nghĩa tư bản lên chủ nghĩa xã hội tồn tại chủ yếu là tư tưởng vô sản.",
+              answer: false,
+            },
+            {
+              text: "2. Trong thời kỳ quá độ từ chủ nghĩa tư bản lên chủ nghĩa xã hội tồn tại nền kinh tế nhiều thành phần.",
+              answer: true,
+            },
+            {
+              text: "3. Đặc điểm cơ bản của thời kỳ quá độ lên chủ nghĩa xã hội là thời kỳ cải tạo cách mạng sâu sắc, triệt để trên lĩnh vực kinh tế.",
+              answer: true,
+            },
+            {
+              text: "4. Trong thời kỳ quá độ từ chủ nghĩa tư bản lên chủ nghĩa xã hội tồn tại nhiều giai cấp, tầng lớp.",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 32,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1. Trong thời kỳ quá độ lên chủ nghĩa xã hội tồn tại nhiều thành phần kinh tế",
+              answer: true,
+            },
+            {
+              text: "2. Thời kỳ quá độ lên chủ nghĩa xã hội có sự tồn tại song song giữa các yếu tố cũ và yếu tố mới",
+              answer: true,
+            },
+            {
+              text: "3. Thời kỳ quá độ lên chủ nghĩa xã hội chỉ có kinh tế nhà nước tồn tại và phát triển",
+              answer: false,
+            },
+            {
+              text: "4. Trong thời kỳ quá độ lên chủ nghĩa xã hội kinh tế tư nhân bị xóa bỏ hoàn toàn",
+              answer: false,
+            },
+          ],
+        },
+        {
+          id: 33,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1. Việt Nam quá độ lên chủ nghĩa xã hội từ một nền sản xuất nhỏ, bỏ qua chế độ tư bản chủ nghĩa",
+              answer: true,
+            },
+            {
+              text: "2. Nhà nước pháp quyền xã hội chủ nghĩa Việt Nam là nhà nước của nhân dân, do nhân dân, vì nhân dân",
+              answer: true,
+            },
+            {
+              text: "3. Chủ nghĩa xã hội ở Việt Nam không chấp nhận kinh tế tư nhân tồn tại song song với kinh tế nhà nước",
+              answer: false,
+            },
+            {
+              text: "4. Việc “bỏ qua\" chế độ tư bản chủ nghĩa là không kế thừa bất kỳ yếu tố tích cực nào của chủ nghĩa tư bản",
+              answer: false,
+            },
+          ],
+        },
+        {
+          id: 34,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1. Thực chất của thời kỳ quá độ lên chủ nghĩa xã hội là thời kỳ cải biến cách mạng từ xã hội tiền tư bản chủ nghĩa và tư bản chủ nghĩa sang xã hội xã hội chủ nghĩa",
+              answer: true,
+            },
+            {
+              text: "2. Quá độ gián tiếp từ chủ nghĩa tư bản lên chủ nghĩa cộng sản đối với những nước chưa trải qua chủ nghĩa tư bản phát triển",
+              answer: true,
+            },
+            {
+              text: "3. Quá độ trực tiếp từ chủ nghĩa tư bản lên chủ nghĩa cộng sản đối với những nước đã trải qua chủ nghĩa tư bản phát triển",
+              answer: true,
+            },
+            {
+              text: "4. Học thuyết hình thái kinh tế - xã hội của chủ nghĩa Mác - Lênin đã chỉ rõ: Lịch sử xã hội đã trải qua 4 hình thái kinh tế - xã hội",
+              answer: false,
+            },
+          ],
+        },
+        {
+          id: 35,
+          type: "tfset",
+          title: "Chọn đáp án (Đúng hoặc Sai) với từng phát biểu sau:",
+          statements: [
+            {
+              text: "1. Chủ nghĩa xã hội ở Việt Nam không bao gồm việc xây dựng nền kinh tế thị trường",
+              answer: false,
+            },
+            {
+              text: "2. Quá độ lên chủ nghĩa xã hội bỏ qua chế độ tư bản chủ nghĩa là sự lựa chọn duy nhất đúng, khoa học, phản ánh đúng quy luật phát triển khách quan của cách mạng Việt Nam trong thời đại ngày nay",
+              answer: true,
+            },
+            {
+              text: "3. Việt Nam thực hiện quá độ trực tiếp đi lên chủ nghĩa xã hội",
+              answer: false,
+            },
+            {
+              text: "4. Phát triển nền kinh tế thị trường định hướng xã hội chủ nghĩa là một trong những phương hướng xây dựng chủ nghĩa xã hội ở Việt Nam",
+              answer: true,
+            },
+          ],
+        },
+        {
+          id: 36,
+          type: "drag_groups",
+          title: "Kéo thả các đáp án khớp với các phát biểu về con đường và thời kỳ quá độ:",
+          groups: {
+            "Quá độ trực tiếp": [
+              "Từ chủ nghĩa tư bản lên chủ nghĩa cộng sản đối với những nước đã trải qua chủ nghĩa tư bản phát triển.",
+            ],
+            "Quá độ gián tiếp": [
+              "Từ chủ nghĩa tư bản lên chủ nghĩa cộng sản đối với những nước chưa trải qua chủ nghĩa tư bản phát triển.",
+            ],
+            "Thời kỳ quá độ": [
+              "Thực chất là thời kỳ cải biến cách mạng từ xã hội tiền tư bản chủ nghĩa và tư bản chủ nghĩa sang xã hội xã hội chủ nghĩa.",
+            ],
+          },
+          items: [
+            "Từ chủ nghĩa tư bản lên chủ nghĩa cộng sản đối với những nước đã trải qua chủ nghĩa tư bản phát triển.",
+            "Từ chủ nghĩa tư bản lên chủ nghĩa cộng sản đối với những nước chưa trải qua chủ nghĩa tư bản phát triển.",
+            "Thực chất là thời kỳ cải biến cách mạng từ xã hội tiền tư bản chủ nghĩa và tư bản chủ nghĩa sang xã hội xã hội chủ nghĩa.",
+          ],
+        },
+        {
+          id: 37,
+          type: "drag_groups",
+          title: "Kéo thả các đáp án khớp với các phát biểu về quá độ ở Việt Nam:",
+          groups: {
+            "Việt Nam thực hiện": ["quá độ gián tiếp"],
+            "Bỏ qua việc xác lập... của quan hệ sản xuất và kiến trúc thượng tầng TBCN": [
+              "vị trí thống trị",
+            ],
+            "Quá độ lên CNXH bỏ qua chế độ TBCN là con đường cách mạng": [
+              "tất yếu khách quan",
+            ],
+          },
+          items: [
+            "quá độ gián tiếp",
+            "vị trí thống trị",
+            "tất yếu khách quan",
+            "quá độ trực tiếp",
+          ],
+        },
+      ];
+
+      let WORK = [];
+      function reset(shuffleAll = true) {
+        WORK = clone(BANK);
+        if (shuffleAll) WORK = shuffle(WORK);
+        WORK.forEach((q) => {
+          if (q.options) q.options = shuffle(q.options);
+          if (q.type === "drag_pairs") {
+            const entries = Object.entries(q.pairs);
+            q.__left = shuffle(entries.map(([k]) => k));
+            q.__right = shuffle(entries.map(([_, v]) => v));
+            q.__extras = q.extras ? shuffle(q.extras) : [];
+          }
+          if (q.type === "drag_groups") {
+            q.__items = shuffle(q.items);
+            q.__groupNames = Object.keys(q.groups);
+          }
+        });
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function render() {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        document.getElementById("meta").textContent = `${WORK.length} câu`;
+        WORK.forEach((q, qi) => {
+          const card = el("div", { class: "card", id: `q_${qi}` });
+          const head = el("div", { class: "qhead" });
+          head.append(el("div", { class: "qidx" }, String(qi + 1)));
+          const title = el("div", { class: "qtitle" }, q.title);
+          if (q.type === "multi")
+            title.append(el("div", { class: "hint" }, "(Chọn nhiều)"));
+          if (q.type === "tfset")
+            title.append(el("div", { class: "hint" }, "(Đúng / Sai)"));
+          if (q.type.includes("drag"))
+            title.append(el("div", { class: "hint" }, "(Kéo thả)"));
+          head.append(title);
+          card.append(head);
+          const body = el("div", { class: "answers" });
+
+          if (q.type === "single" || q.type === "multi") {
+            q.options.forEach((opt) => {
+              const id = `q${qi}_${safeId(opt)}`;
+              const lab = el("label");
+              const ipt = el("input", {
+                type: q.type === "single" ? "radio" : "checkbox",
+                name: `q${qi}`,
+                value: opt,
+                id,
+              });
+              lab.append(ipt, el("span", {}, opt));
+              body.append(lab);
+            });
+          }
+          if (q.type === "tfset") {
+            q.statements.forEach((st, si) => {
+              const row = el("div", { class: "tf-item" });
+              row.append(el("div", {}, st.text));
+              const ch = el("div", { class: "tf-row" });
+              ["Đúng", "Sai"].forEach((v) => {
+                const lab = el("label");
+                const ipt = el("input", {
+                  type: "radio",
+                  name: `q${qi}_s${si}`,
+                  value: v,
+                });
+                lab.append(ipt, el("span", {}, v));
+                ch.append(lab);
+              });
+              row.append(ch);
+              body.append(row);
+            });
+          }
+          if (q.type === "drag_pairs") {
+            const wrap = el("div", { class: "dragwrap" });
+            const zones = el("div", { class: "dragzone" });
+            q.__right.forEach((r) => {
+              const z = el("div", { class: "zone", dataset: { target: r } });
+              z.append(el("h4", {}, r), el("div", { class: "droparea" }));
+              zones.append(z);
+            });
+            wrap.append(zones);
+            const pool = el("div", { class: "pool" });
+            [...q.__left, ...(q.__extras || [])].forEach((l) => {
+              pool.append(
+                el(
+                  "div",
+                  { class: "pill", draggable: true, dataset: { txt: l } },
+                  l,
+                ),
+              );
+            });
+            wrap.append(pool);
+            body.append(wrap);
+          }
+          if (q.type === "drag_groups") {
+            const wrap = el("div", { class: "dragwrap" });
+            const zones = el("div", { class: "dragzone" });
+            q.__groupNames.forEach((g) => {
+              const z = el("div", { class: "zone", dataset: { gname: g } });
+              z.append(el("h4", {}, g), el("div", { class: "droparea" }));
+              zones.append(z);
+            });
+            wrap.append(zones);
+            const pool = el("div", { class: "pool" });
+            q.__items.forEach((item) => {
+              pool.append(
+                el(
+                  "div",
+                  { class: "pill", draggable: true, dataset: { txt: item } },
+                  item,
+                ),
+              );
+            });
+            wrap.append(pool);
+            body.append(wrap);
+          }
+          card.append(body, el("div", { class: "result", id: `res_${qi}` }));
+          list.append(card);
+        });
+        enableDragDrop();
+      }
+
+      function enableDragDrop() {
+        document.querySelectorAll(".pill").forEach((p) => {
+          p.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", p.dataset.txt);
+          });
+        });
+        document.querySelectorAll(".droparea,.pool").forEach((area) => {
+          area.addEventListener("dragover", (e) => e.preventDefault());
+          area.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const txt = e.dataTransfer.getData("text/plain");
+            if (!txt) return;
+            const old = document.querySelector(
+              `.pill[data-txt="${CSS.escape(txt)}"]`,
+            );
+            if (old) old.remove();
+            const pill = el(
+              "div",
+              { class: "pill", draggable: true, dataset: { txt } },
+              txt,
+            );
+            pill.addEventListener("dragstart", (ev) =>
+              ev.dataTransfer.setData("text/plain", txt),
+            );
+            area.append(pill);
+          });
+        });
+      }
+
+      function getUserAnswer(q, qi) {
+        if (q.type === "single" || q.type === "multi") {
+          return Array.from(
+            document.querySelectorAll(`#q_${qi} input:checked`),
+          ).map((x) => x.value);
+        }
+        if (q.type === "tfset") {
+          return q.statements.map((st, si) => {
+            const inp = document.querySelector(
+              `input[name="q${qi}_s${si}"]:checked`,
+            );
+            return inp ? inp.value === "Đúng" : null;
+          });
+        }
+        if (q.type === "drag_pairs") {
+          const ans = {};
+          document.querySelectorAll(`#q_${qi} .zone`).forEach((z) => {
+            const target = z.dataset.target;
+            const pill = z.querySelector(".pill");
+            if (pill) ans[pill.dataset.txt] = target;
+          });
+          return ans;
+        }
+        if (q.type === "drag_groups") {
+          const ans = {};
+          document.querySelectorAll(`#q_${qi} .zone`).forEach((z) => {
+            const gname = z.dataset.gname;
+            ans[gname] = Array.from(z.querySelectorAll(".pill")).map(
+              (p) => p.dataset.txt,
+            );
+          });
+          return ans;
+        }
+        return null;
+      }
+
+      function isCorrect(q, ans) {
+        if (!ans) return false;
+        if (q.type === "single" || q.type === "multi") {
+          return (
+            ans.length === q.answer.length &&
+            ans.every((a) => q.answer.includes(a))
+          );
+        }
+        if (q.type === "tfset") {
+          return ans.every((a, i) => a === q.statements[i].answer);
+        }
+        if (q.type === "drag_pairs") {
+          return Object.entries(q.pairs).every(([l, r]) => ans[l] === r);
+        }
+        if (q.type === "drag_groups") {
+          return Object.entries(q.groups).every(([g, arr]) =>
+            arr.every((item) => ans[g] && ans[g].includes(item)),
+          );
+        }
+        return false;
+      }
+
+      function showKey(q, qi) {
+        const res = document.getElementById(`res_${qi}`);
+        res.innerHTML = "";
+        if (q.type === "single" || q.type === "multi")
+          res.innerHTML = `<div class="hint">Đáp án: <b>${q.answer.join(
+            ", ",
+          )}</b></div>`;
+        if (q.type === "tfset")
+          res.innerHTML = `<div class="hint">Đáp án: <b>${q.statements
+            .map((s) => (s.answer ? "Đúng" : "Sai"))
+            .join(" · ")}</b></div>`;
+        if (q.type === "drag_pairs")
+          res.innerHTML = `<div class="hint">Đáp án:<br><b>${Object.entries(
+            q.pairs,
+          )
+            .map(([l, r]) => `${l} → ${r}`)
+            .join("<br>")}</b></div>`;
+        if (q.type === "drag_groups")
+          res.innerHTML = `<div class="hint">Đáp án:<br><b>${Object.entries(
+            q.groups,
+          )
+            .map(([g, a]) => `${g}: ${a.join(", ")}`)
+            .join("<br>")}</b></div>`;
+      }
+
+      function checkAll() {
+        let correct = 0;
+        WORK.forEach((q, qi) => {
+          const res = document.getElementById(`res_${qi}`);
+          const user = getUserAnswer(q, qi);
+          if (isCorrect(q, user)) {
+            correct++;
+            res.textContent = "✔ Đúng";
+            res.className = "result r-good";
+          } else {
+            res.textContent = "✘ Sai";
+            res.className = "result r-bad";
+          }
+        });
+        document.getElementById("meta").textContent =
+          `${correct}/${WORK.length} đúng`;
+      }
+
+      document.getElementById("btnCheck").addEventListener("click", checkAll);
+      document
+        .getElementById("btnReset")
+        .addEventListener("click", () => reset(true));
+      let keyVisible = false;
+      document.getElementById("btnToggleKey").addEventListener("click", () => {
+        keyVisible = !keyVisible;
+        WORK.forEach((q, qi) => {
+          if (keyVisible) showKey(q, qi);
+          else {
+            const r = document.getElementById(`res_${qi}`);
+            r.textContent = "";
+            r.className = "result";
+          }
+        });
+      });
+
+      reset(true);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chủ Nghĩa Xã Hội - Thời Kỳ Quá Độ</title>
+    <style>
+      :root {
+        --bg1: #89f7fe;
+        --bg2: #66a6ff;
+        --card: #ffffff;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --good: #16a34a;
+        --bad: #dc2626;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        color: var(--ink);
+        background: linear-gradient(135deg, var(--bg1), var(--bg2));
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px 20px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(22px, 3vw, 30px);
+      }
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button {
+        border: none;
+        padding: 10px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        background: var(--accent);
+        color: #fff;
+      }
+      button.secondary {
+        background: #111827;
+      }
+      button.ghost {
+        background: #fff;
+        color: #111827;
+        border: 1px solid #ddd;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+      .qhead {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .qidx {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #fff;
+        background: #111827;
+      }
+      .qtitle {
+        font-weight: 700;
+      }
+      .hint {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .answers {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .answers label {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        cursor: pointer;
+        background: #fff;
+      }
+      .answers input {
+        width: 18px;
+        height: 18px;
+      }
+      .tf-item {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        background: #fff;
+        margin-bottom: 8px;
+      }
+      .tf-row {
+        margin-top: 6px;
+        display: flex;
+        gap: 16px;
+      }
+      .dragwrap {
+        display: grid;
+        gap: 12px;
+      }
+      .dragzone {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .zone {
+        min-height: 64px;
+        border: 2px dashed #aaa;
+        border-radius: 14px;
+        padding: 10px;
+        background: #fafafa;
+      }
+      .pill {
+        background: #eef2ff;
+        border: 1px solid #99c;
+        border-radius: 999px;
+        padding: 8px 12px;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        font-weight: 600;
+        user-select: none;
+        cursor: grab;
+        margin: 4px;
+      }
+      .pool,
+      .droparea {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 40px;
+      }
+      .result {
+        margin-top: 12px;
+        font-weight: 700;
+      }
+      .r-good {
+        color: var(--good);
+      }
+      .r-bad {
+        color: var(--bad);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <h1>Chủ Nghĩa Xã Hội & Thời Kỳ Quá Độ</h1>
+        <div class="toolbar">
+          <button id="btnCheck">Xem kết quả</button>
+          <button class="secondary" id="btnReset">Làm lại & đảo câu</button>
+          <button class="ghost" id="btnToggleKey">Hiện/ẩn đáp án đúng</button>
+          <div class="meta" id="meta">0/0 câu</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap"><div id="list" class="cards"></div></main>
+    <script>
+      const clone = (x) => JSON.parse(JSON.stringify(x));
+      const shuffle = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+      const el = (tag, attrs = {}, html = "") => {
+        const e = document.createElement(tag);
+        Object.entries(attrs).forEach(([k, v]) => {
+          if (k === "class") e.className = v;
+          else if (k === "dataset") Object.assign(e.dataset, v);
+          else e.setAttribute(k, v);
+        });
+        if (html) e.innerHTML = html;
+        return e;
+      };
+      const safeId = (str) =>
+        "id_" +
+        str
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9]/g, "_");
+
+const BANK = [
+  {
+    id: 1,
+    type: "single",
+    title: "Câu 1: Theo nguyên nghĩa tiếng Hy Lạp thì \"Dân chủ\" là gì?",
+    options: [
+      "A. Là quyền tự do của mỗi người",
+      "B. Là quyền lực thuộc về nhân dân",
+      "C. Là quyền của con người",
+      "D. Là trật tự xã hội"
+    ],
+    answer: ["B. Là quyền lực thuộc về nhân dân"]
+  },
+  {
+    id: 2,
+    type: "single",
+    title: "Câu 2: Bản chất kinh tế của nền dân chủ xã hội chủ nghĩa là:",
+    options: [
+      "A. Thực hiện chế độ công hữu về tư liệu sản xuất chủ yếu và thực hiện chế độ phân phối lợi ích theo kết quả lao động là chủ yếu",
+      "B. Thực hiện chế độ phân phối \"Làm theo năng lực, hưởng theo nhu cầu\"",
+      "C. Thực hiện chế độ tư hữu về tư liệu sản xuất",
+      "D. Thực hiện chế độ tư hữu về công cụ sản xuất chủ yếu"
+    ],
+    answer: [
+      "A. Thực hiện chế độ công hữu về tư liệu sản xuất chủ yếu và thực hiện chế độ phân phối lợi ích theo kết quả lao động là chủ yếu"
+    ]
+  },
+  {
+    id: 3,
+    type: "single",
+    title: "Câu 3: Chọn ý không đúng về điểm khác biệt của nền dân chủ xã hội chủ nghĩa so với nền dân chủ tư sản:",
+    options: [
+      "A. Mang tính nhất nguyên về chính trị",
+      "B. Dựa trên chế độ sở hữu xã hội về những tư liệu sản xuất chủ yếu của toàn xã hội",
+      "C. Trước hết và chủ yếu được thực hiện bằng Nhà nước pháp quyền xã hội chủ nghĩa",
+      "D. Không mang tính giai cấp"
+    ],
+    answer: ["D. Không mang tính giai cấp"]
+  },
+  {
+    id: 4,
+    type: "single",
+    title: "Câu 4: Lịch sử loài người đã từng xuất hiện các nền dân chủ nào?",
+    options: [
+      "A. Nền dân chủ chủ nô, nền dân chủ phong kiến, nền dân chủ tư sản.",
+      "B. Nền dân chủ nguyên thủy, nền dân chủ chủ nô, nền dân chủ phong kiến, nền dân chủ tư sản, nền dân chủ vô sản",
+      "C. Nền dân chủ chủ nô, nền dân chủ phong kiến, nền dân chủ tư sản, nền dân chủ vô sản",
+      "D. Nền dân chủ chủ nô, nền dân chủ tư sản, nền dân chủ xã hội chủ nghĩa"
+    ],
+    answer: [
+      "D. Nền dân chủ chủ nô, nền dân chủ tư sản, nền dân chủ xã hội chủ nghĩa"
+    ]
+  },
+  {
+    id: 5,
+    type: "single",
+    title: "Câu 5: So với các nền dân chủ trước đây, dân chủ xã hội chủ nghĩa có điểm khác biệt cơ bản nào?",
+    options: [
+      "A. Là nền dân chủ phi lịch sử",
+      "B. Là nền dân chủ rộng rãi cho giai cấp công nhân và nhân dân lao động",
+      "C. Không còn mang tính giai cấp",
+      "D. Là nền dân chủ thuần túy"
+    ],
+    answer: [
+      "B. Là nền dân chủ rộng rãi cho giai cấp công nhân và nhân dân lao động"
+    ]
+  },
+  {
+    id: 6,
+    type: "single",
+    title: "Câu 6: Nhà nước pháp quyền XHCN quản lý mọi mặt của đời sống xã hội chủ yếu bằng gì?",
+    options: [
+      "A. Tuyên truyền",
+      "B. Giáo dục",
+      "C. Đường lối, chính sách",
+      "D. Hiến pháp, pháp luật"
+    ],
+    answer: ["D. Hiến pháp, pháp luật"]
+  },
+  {
+    id: 7,
+    type: "single",
+    title: "Câu 7: Kiểu nhà nước nào sau đây được V.I. Lênin gọi là nhà nước \"nửa nhà nước\"?",
+    options: [
+      "A. Nhà nước chủ nô",
+      "B. Nhà nước phong kiến",
+      "C. Nhà nước tư sản",
+      "D. Nhà nước xã hội chủ nghĩa"
+    ],
+    answer: ["D. Nhà nước xã hội chủ nghĩa"]
+  },
+  {
+    id: 8,
+    type: "single",
+    title: "Câu 8: Căn cứ vào phạm vi tác động của quyền lực nhà nước, chức năng của nhà nước được chia thành:",
+    options: [
+      "A. Chức năng đối nội và chức năng đối ngoại",
+      "B. Chức năng chính trị, kinh tế, văn hóa, xã hội",
+      "C. Chức năng giai cấp, xã hội",
+      "D. Chức năng trấn áp và chức năng tổ chức, xây dựng"
+    ],
+    answer: ["A. Chức năng đối nội và chức năng đối ngoại"]
+  },
+  {
+    id: 9,
+    type: "single",
+    title: "Câu 9: Chế độ dân chủ nhân dân ở Việt Nam được xác lập từ khi nào?",
+    options: [
+      "A. Sau kháng chiến chống đế quốc Mỹ năm 1975",
+      "B. Sau khi Đảng Cộng sản ra đời",
+      "C. Sau kháng chiến chống thực dân Pháp năm 1954",
+      "D. Sau cách mạng tháng Tám năm 1945"
+    ],
+    answer: ["D. Sau cách mạng tháng Tám năm 1945"]
+  },
+  {
+    id: 10,
+    type: "single",
+    title: "Câu 10: Nền dân chủ xã hội chủ nghĩa ở Việt Nam có điểm khác biệt cơ bản nào so với các nền dân chủ trước đây?",
+    options: [
+      "A. Là nền dân chủ phi lịch sử",
+      "B. Là nền dân chủ rộng rãi cho giai cấp công nhân và nhân dân lao động",
+      "C. Là nền dân chủ thuần túy",
+      "D. Còn mang tính giai cấp"
+    ],
+    answer: [
+      "B. Là nền dân chủ rộng rãi cho giai cấp công nhân và nhân dân lao động"
+    ]
+  },
+  {
+    id: 11,
+    type: "single",
+    title: "Câu 11: Tại sao quyền lực nhà nước ở Việt Nam được tổ chức theo nguyên tắc thống nhất?",
+    options: [
+      "A. Để tăng cường sự kiểm soát của nhà nước",
+      "B. Để đảm bảo sự phối hợp và kiểm soát giữa các cơ quan lập pháp, hành pháp và tư pháp",
+      "C. Để kiểm soát chặt chẽ các hoạt động kinh tế",
+      "D. Để giảm thiểu vai trò của các tổ chức phi chính phủ"
+    ],
+    answer: [
+      "B. Để đảm bảo sự phối hợp và kiểm soát giữa các cơ quan lập pháp, hành pháp và tư pháp"
+    ]
+  },
+  {
+    id: 12,
+    type: "single",
+    title: "Câu 12: Hãy xác định biện pháp để nâng cao hiệu quả hoạt động của Nhà nước pháp quyền xã hội chủ nghĩa ở Việt Nam.",
+    options: [
+      "A. Giảm thiểu sự phát triển của khu vực tư nhân",
+      "B. Tăng cường sự kiểm soát của nhà nước",
+      "C. Xây dựng và từng bước hoàn thiện hệ thống giám sát, phản biện xã hội",
+      "D. Giảm thiểu sự can thiệp của các tổ chức xã hội"
+    ],
+    answer: [
+      "C. Xây dựng và từng bước hoàn thiện hệ thống giám sát, phản biện xã hội"
+    ]
+  },
+  {
+    id: 13,
+    type: "single",
+    title: "Câu 13: Nhà nước pháp quyền xã hội chủ nghĩa ở Việt Nam có đặc điểm như thế nào?",
+    options: [
+      "A. Nhà nước đặt dưới sự lãnh đạo của Đảng cộng sản",
+      "B. Nhà nước hoạt động trên nền tảng của khối liên minh công – nông – trí thức",
+      "C. Nhà nước được tổ chức và hoạt động trên cơ sở Hiến pháp và pháp luật",
+      "D. Nhà nước hình thành là kết quả của cách mạng xã hội chủ nghĩa"
+    ],
+    answer: [
+      "C. Nhà nước được tổ chức và hoạt động trên cơ sở Hiến pháp và pháp luật"
+    ]
+  },
+  {
+    id: 14,
+    type: "multi",
+    title: "Câu 14: Dân chủ trong xã hội nguyên thủy được thể hiện như thế nào? (Chọn 2 đáp án đúng)",
+    options: [
+      "A. Mọi người đều bình đẳng trong quyết định các vấn đề chung",
+      "B. Không có sự phân chia giai cấp và quyền lực",
+      "C. Quyền lực tập trung vào một số cá nhân",
+      "D. Hình thành tổ chức chính trị phức tạp"
+    ],
+    answer: [
+      "A. Mọi người đều bình đẳng trong quyết định các vấn đề chung",
+      "B. Không có sự phân chia giai cấp và quyền lực"
+    ]
+  },
+  {
+    id: 15,
+    type: "multi",
+    title: "Câu 15: Đặc điểm nổi bật của nền dân chủ xã hội chủ nghĩa là gì? (Chọn 2 đáp án đúng)",
+    options: [
+      "A. Tôn trọng quyền sở hữu tư nhân tuyệt đối",
+      "B. Phân biệt rõ ràng giữa các tầng lớp xã hội",
+      "C. Thực hiện quyền làm chủ tập thể của nhân dân",
+      "D. Đặt quyền lợi của nhân dân lao động lên hàng đầu"
+    ],
+    answer: [
+      "C. Thực hiện quyền làm chủ tập thể của nhân dân",
+      "D. Đặt quyền lợi của nhân dân lao động lên hàng đầu"
+    ]
+  },
+  {
+    id: 16,
+    type: "single",
+    title: "Câu 16: Đâu là định nghĩa đúng và đầy đủ về dân chủ?",
+    options: [
+      "A. Dân chủ là một giá trị phản ánh những quyền tối thiểu của con người, là một hình thức tổ chức nhà nước thừa nhận quyền làm chủ của nhân dân; là một giá trị xã hội phản ánh sự nghiệp đấu tranh của con người",
+      "B. Dân chủ là giá trị phản ánh quyền cơ bản của con người, là kết quả của sự nghiệp đấu tranh của con người vì lợi ích của con người",
+      "C. Dân chủ là một giá trị phản ánh những quyền cơ bản của con người, là một hình thức tổ chức nhà nước của giai cấp cầm quyền; có quá trình ra đời, phát triển cùng với lịch sử xã hội nhân loại",
+      "D. Dân chủ là một giá trị xã hội phản ánh sự nghiệp đấu tranh của con người vì sự phát triển tiến bộ xã hội"
+    ],
+    answer: [
+      "A. Dân chủ là một giá trị phản ánh những quyền tối thiểu của con người, là một hình thức tổ chức nhà nước thừa nhận quyền làm chủ của nhân dân; là một giá trị xã hội phản ánh sự nghiệp đấu tranh của con người"
+    ]
+  },
+  {
+    id: 17,
+    type: "single",
+    title: "Câu 17: Bản chất tư tưởng - văn hoá - xã hội của nền dân chủ xã hội chủ nghĩa được thể hiện ở nội dung nào?",
+    options: [
+      "A. Lấy hệ tư tưởng của giai cấp nông dân làm chủ đạo",
+      "B. Lấy hệ tư tưởng của giai cấp tư sản làm chủ đạo",
+      "C. Lấy hệ tư tưởng của giai cấp tiểu tư sản làm chủ đạo",
+      "D. Lấy hệ tư tưởng Mác - Lênin - hệ tư tưởng của giai cấp công nhân làm chủ đạo"
+    ],
+    answer: [
+      "D. Lấy hệ tư tưởng Mác - Lênin - hệ tư tưởng của giai cấp công nhân làm chủ đạo"
+    ]
+  },
+  {
+    id: 18,
+    type: "single",
+    title: "Câu 18: Đặc điểm của nhà nước pháp quyền xã hội chủ nghĩa là gì?",
+    options: [
+      "A. Quản lý xã hội bằng dư luận",
+      "B. Quản lý xã hội bằng mệnh lệnh hành chính",
+      "C. Quản lý xã hội bằng niềm tin",
+      "D. Quản lý xã hội bằng pháp luật"
+    ],
+    answer: ["D. Quản lý xã hội bằng pháp luật"]
+  },
+  {
+    id: 19,
+    type: "single",
+    title: "Câu 19: So với các mô hình nhà nước khác trong lịch sử thì nhà nước pháp quyền xã hội chủ nghĩa ở Việt Nam có sự khác biệt về chất như thế nào?",
+    options: [
+      "A. Vừa mang bản chất của giai cấp công nhân và nhân dân lao động",
+      "B. Mang bản chất của đa số nhân dân lao động",
+      "C. Mang bản chất của giai cấp công nhân, tính nhân dân rộng rãi và tính dân tộc sâu sắc",
+      "D. Mang bản chất của giai cấp công nhân"
+    ],
+    answer: [
+      "C. Mang bản chất của giai cấp công nhân, tính nhân dân rộng rãi và tính dân tộc sâu sắc"
+    ]
+  },
+  {
+    id: 20,
+    type: "single",
+    title: "Câu 20: Sự ra đời của nhà nước xã hội chủ nghĩa gắn với sự kiện nào?",
+    options: [
+      "A. Giai cấp công nhân đấu tranh đòi tăng lương, giảm giờ làm, cải thiện điều kiện lao động",
+      "B. Giai cấp công nhân lật đổ nhà nước của giai cấp bóc lột, giành được chính quyền",
+      "C. Giai cấp công nhân xây dựng công nghiệp",
+      "D. Giai cấp công nhân đấu tranh phản đối tình trạng áp bức bóc lột của giai cấp tư sản"
+    ],
+    answer: [
+      "B. Giai cấp công nhân lật đổ nhà nước của giai cấp bóc lột, giành được chính quyền"
+    ]
+  },
+  {
+    id: 21,
+    type: "single",
+    title: "Câu 21: Dân chủ xã hội chủ nghĩa mang tính nhất nguyên về chính trị, được hiểu là:",
+    options: [
+      "A. Nền dân chủ xã hội chủ nghĩa đại biểu cho trí tuệ, lợi ích của riêng giai cấp công nhân và nhân dân lao động",
+      "B. Nền dân chủ xã hội chủ nghĩa đại biểu cho trí tuệ, lợi ích của riêng giai cấp công nhân và tầng lớp trí thức",
+      "C. Nền dân chủ xã hội chủ nghĩa do Đảng Cộng sản lãnh đạo – đại biểu cho trí tuệ, lợi ích của giai cấp công nhân, nhân dân lao động và toàn dân tộc",
+      "D. Nền dân chủ xã hội chủ nghĩa đại biểu cho trí tuệ, lợi ích của riêng giai cấp công nhân và giai cấp nông dân"
+    ],
+    answer: [
+      "C. Nền dân chủ xã hội chủ nghĩa do Đảng Cộng sản lãnh đạo – đại biểu cho trí tuệ, lợi ích của giai cấp công nhân, nhân dân lao động và toàn dân tộc"
+    ]
+  },
+  {
+    id: 22,
+    type: "single",
+    title: "Câu 22: Hãy xác định mục tiêu chính của việc xây dựng Nhà nước pháp quyền xã hội chủ nghĩa ở Việt Nam.",
+    options: [
+      "A. Phát triển kinh tế thị trường tự do",
+      "B. Phục vụ lợi ích của giai cấp công nhân và nhân dân lao động",
+      "C. Giảm thiểu sự can thiệp của nhà nước",
+      "D. Tăng cường sự kiểm soát của nhà nước"
+    ],
+    answer: ["B. Phục vụ lợi ích của giai cấp công nhân và nhân dân lao động"]
+  },
+  {
+    id: 23,
+    type: "multi",
+    title: "Câu 23:Bản chất của nền dân chủ xã hội chủ nghĩa là: (Chọn 2 đáp án đúng)",
+    options: [
+      "A. Nền dân chủ mang tính cá nhân",
+      "B. Nền dân chủ của số nhân dân lao động",
+      "C. Nền dân chủ của giai cấp tư sản",
+      "D. Nền dân chủ mang tính tập thể"
+    ],
+    answer: [
+      "B. Nền dân chủ của số nhân dân lao động",
+      "D. Nền dân chủ mang tính tập thể"
+    ]
+  },
+  {
+    id: 24,
+    type: "multi",
+    title: "Câu 24: Dân chủ xã hội chủ nghĩa ở Việt Nam là: (Chọn 2 đáp án đúng)",
+    options: [
+      "A. Nền dân chủ gắn liền với sự lãnh đạo của Đảng Cộng sản Việt Nam",
+      "B. Chế độ dân chủ tư sản mở rộng",
+      "C. Chế độ dân chủ không phụ thuộc vào nhà nước",
+      "D. Nền dân chủ bảo đảm quyền lực thuộc về nhân dân"
+    ],
+    answer: [
+      "A. Nền dân chủ gắn liền với sự lãnh đạo của Đảng Cộng sản Việt Nam",
+      "D. Nền dân chủ bảo đảm quyền lực thuộc về nhân dân"
+    ]
+  },
+  {
+    id: 25,
+    type: "single",
+    title: "Câu 25: Bản chất chính trị của nền dân chủ xã hội chủ nghĩa thể hiện như thế nào?",
+    options: [
+      "A. Nền dân chủ tập trung vào phát triển kinh tế tư nhân và bảo vệ lợi ích của tầng lớp giàu có.",
+      "B. Quyền lực thuộc về một cá nhân duy nhất, không có sự tham gia của quần chúng nhân dân.",
+      "C. Quyền lực và lợi ích thuộc về toàn thể nhân dân lao động, trong đó có giai cấp công nhân, dưới sự lãnh đạo của Đảng Cộng sản.",
+      "D. Nhà nước chủ yếu thực hiện các quyết định chính trị mà không cần sự đồng thuận hoặc tham gia của người dân."
+    ],
+    answer: [
+      "C. Quyền lực và lợi ích thuộc về toàn thể nhân dân lao động, trong đó có giai cấp công nhân, dưới sự lãnh đạo của Đảng Cộng sản."
+    ]
+  },
+  {
+    id: 26,
+    type: "single",
+    title: "Câu 26: Bản chất dân chủ xã hội chủ nghĩa ở Việt Nam được thực hiện thông qua:",
+    options: [
+      "A. Các hình thức dân chủ tự nguyện.",
+      "B. Các hình thức dân chủ gián tiếp và trực tiếp.",
+      "C. Các hình thức dân chủ cơ bản và không cơ bản.",
+      "D. Các hình thức dân chủ không tự nguyện."
+    ],
+    answer: ["B. Các hình thức dân chủ gián tiếp và trực tiếp."]
+  },
+  {
+    id: 27,
+    type: "single",
+    title: "Câu 27: Bằng hiểu biết của bản thân, hãy cho biết đâu là hình thức dân chủ gián tiếp?",
+    options: [
+      "A. Người dân tự tổ chức các phong trào xã hội để yêu cầu các quyền lợi mà không thông qua bất kỳ đại diện nào.",
+      "B. Người dân tham gia trực tiếp vào các cuộc trưng cầu ý dân về các chính sách hoặc luật pháp cụ thể.",
+      "C. Người dân bầu ra đại diện của mình để thay mặt họ quyết định các vấn đề quan trọng trong quốc hội hoặc cơ quan lập pháp.",
+      "D. Người dân trực tiếp tham gia bỏ phiếu để quyết định các vấn đề quan trọng của đất nước."
+    ],
+    answer: [
+      "C. Người dân bầu ra đại diện của mình để thay mặt họ quyết định các vấn đề quan trọng trong quốc hội hoặc cơ quan lập pháp."
+    ]
+  },
+  {
+    id: 28,
+    type: "multi",
+    title: "Câu 28: Nhà nước pháp quyền xã hội chủ nghĩa Việt Nam được xây dựng dựa trên những nguyên tắc nào sau đây? (Chọn 2 đáp án đúng)",
+    options: [
+      "A. Quyền lực nhà nước là tối cao, không cần kiểm soát.",
+      "B. Đảng lãnh đạo nhà nước theo phương thức mệnh lệnh.",
+      "C. Quyền lực nhà nước thống nhất, có phân công, phối hợp và kiểm soát.",
+      "D. Nhà nước quản lý xã hội bằng hiến pháp, pháp luật."
+    ],
+    answer: [
+      "C. Quyền lực nhà nước thống nhất, có phân công, phối hợp và kiểm soát.",
+      "D. Nhà nước quản lý xã hội bằng hiến pháp, pháp luật."
+    ]
+  }
+];
+
+      let WORK = [];
+      function reset(shuffleAll = true) {
+        WORK = clone(BANK);
+        if (shuffleAll) WORK = shuffle(WORK);
+        WORK.forEach((q) => {
+          if (q.options) q.options = shuffle(q.options);
+          if (q.type === "drag_pairs") {
+            const entries = Object.entries(q.pairs);
+            q.__left = shuffle(entries.map(([k]) => k));
+            q.__right = shuffle(entries.map(([_, v]) => v));
+            q.__extras = q.extras ? shuffle(q.extras) : [];
+          }
+          if (q.type === "drag_groups") {
+            q.__items = shuffle(q.items);
+            q.__groupNames = Object.keys(q.groups);
+          }
+        });
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function render() {
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        document.getElementById("meta").textContent = `${WORK.length} câu`;
+        WORK.forEach((q, qi) => {
+          const card = el("div", { class: "card", id: `q_${qi}` });
+          const head = el("div", { class: "qhead" });
+          head.append(el("div", { class: "qidx" }, String(qi + 1)));
+          const title = el("div", { class: "qtitle" }, q.title);
+          if (q.type === "multi")
+            title.append(el("div", { class: "hint" }, "(Chọn nhiều)"));
+          if (q.type === "tfset")
+            title.append(el("div", { class: "hint" }, "(Đúng / Sai)"));
+          if (q.type.includes("drag"))
+            title.append(el("div", { class: "hint" }, "(Kéo thả)"));
+          head.append(title);
+          card.append(head);
+          const body = el("div", { class: "answers" });
+
+          if (q.type === "single" || q.type === "multi") {
+            q.options.forEach((opt) => {
+              const id = `q${qi}_${safeId(opt)}`;
+              const lab = el("label");
+              const ipt = el("input", {
+                type: q.type === "single" ? "radio" : "checkbox",
+                name: `q${qi}`,
+                value: opt,
+                id,
+              });
+              lab.append(ipt, el("span", {}, opt));
+              body.append(lab);
+            });
+          }
+          if (q.type === "tfset") {
+            q.statements.forEach((st, si) => {
+              const row = el("div", { class: "tf-item" });
+              row.append(el("div", {}, st.text));
+              const ch = el("div", { class: "tf-row" });
+              ["Đúng", "Sai"].forEach((v) => {
+                const lab = el("label");
+                const ipt = el("input", {
+                  type: "radio",
+                  name: `q${qi}_s${si}`,
+                  value: v,
+                });
+                lab.append(ipt, el("span", {}, v));
+                ch.append(lab);
+              });
+              row.append(ch);
+              body.append(row);
+            });
+          }
+          if (q.type === "drag_pairs") {
+            const wrap = el("div", { class: "dragwrap" });
+            const zones = el("div", { class: "dragzone" });
+            q.__right.forEach((r) => {
+              const z = el("div", { class: "zone", dataset: { target: r } });
+              z.append(el("h4", {}, r), el("div", { class: "droparea" }));
+              zones.append(z);
+            });
+            wrap.append(zones);
+            const pool = el("div", { class: "pool" });
+            [...q.__left, ...(q.__extras || [])].forEach((l) => {
+              pool.append(
+                el(
+                  "div",
+                  { class: "pill", draggable: true, dataset: { txt: l } },
+                  l,
+                ),
+              );
+            });
+            wrap.append(pool);
+            body.append(wrap);
+          }
+          if (q.type === "drag_groups") {
+            const wrap = el("div", { class: "dragwrap" });
+            const zones = el("div", { class: "dragzone" });
+            q.__groupNames.forEach((g) => {
+              const z = el("div", { class: "zone", dataset: { gname: g } });
+              z.append(el("h4", {}, g), el("div", { class: "droparea" }));
+              zones.append(z);
+            });
+            wrap.append(zones);
+            const pool = el("div", { class: "pool" });
+            q.__items.forEach((item) => {
+              pool.append(
+                el(
+                  "div",
+                  { class: "pill", draggable: true, dataset: { txt: item } },
+                  item,
+                ),
+              );
+            });
+            wrap.append(pool);
+            body.append(wrap);
+          }
+          card.append(body, el("div", { class: "result", id: `res_${qi}` }));
+          list.append(card);
+        });
+        enableDragDrop();
+      }
+
+      function enableDragDrop() {
+        document.querySelectorAll(".pill").forEach((p) => {
+          p.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", p.dataset.txt);
+          });
+        });
+        document.querySelectorAll(".droparea,.pool").forEach((area) => {
+          area.addEventListener("dragover", (e) => e.preventDefault());
+          area.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const txt = e.dataTransfer.getData("text/plain");
+            if (!txt) return;
+            const old = document.querySelector(
+              `.pill[data-txt="${CSS.escape(txt)}"]`,
+            );
+            if (old) old.remove();
+            const pill = el(
+              "div",
+              { class: "pill", draggable: true, dataset: { txt } },
+              txt,
+            );
+            pill.addEventListener("dragstart", (ev) =>
+              ev.dataTransfer.setData("text/plain", txt),
+            );
+            area.append(pill);
+          });
+        });
+      }
+
+      function getUserAnswer(q, qi) {
+        if (q.type === "single" || q.type === "multi") {
+          return Array.from(
+            document.querySelectorAll(`#q_${qi} input:checked`),
+          ).map((x) => x.value);
+        }
+        if (q.type === "tfset") {
+          return q.statements.map((st, si) => {
+            const inp = document.querySelector(
+              `input[name="q${qi}_s${si}"]:checked`,
+            );
+            return inp ? inp.value === "Đúng" : null;
+          });
+        }
+        if (q.type === "drag_pairs") {
+          const ans = {};
+          document.querySelectorAll(`#q_${qi} .zone`).forEach((z) => {
+            const target = z.dataset.target;
+            const pill = z.querySelector(".pill");
+            if (pill) ans[pill.dataset.txt] = target;
+          });
+          return ans;
+        }
+        if (q.type === "drag_groups") {
+          const ans = {};
+          document.querySelectorAll(`#q_${qi} .zone`).forEach((z) => {
+            const gname = z.dataset.gname;
+            ans[gname] = Array.from(z.querySelectorAll(".pill")).map(
+              (p) => p.dataset.txt,
+            );
+          });
+          return ans;
+        }
+        return null;
+      }
+
+      function isCorrect(q, ans) {
+        if (!ans) return false;
+        if (q.type === "single" || q.type === "multi") {
+          return (
+            ans.length === q.answer.length &&
+            ans.every((a) => q.answer.includes(a))
+          );
+        }
+        if (q.type === "tfset") {
+          return ans.every((a, i) => a === q.statements[i].answer);
+        }
+        if (q.type === "drag_pairs") {
+          return Object.entries(q.pairs).every(([l, r]) => ans[l] === r);
+        }
+        if (q.type === "drag_groups") {
+          return Object.entries(q.groups).every(([g, arr]) =>
+            arr.every((item) => ans[g] && ans[g].includes(item)),
+          );
+        }
+        return false;
+      }
+
+      function showKey(q, qi) {
+        const res = document.getElementById(`res_${qi}`);
+        res.innerHTML = "";
+        if (q.type === "single" || q.type === "multi")
+          res.innerHTML = `<div class="hint">Đáp án: <b>${q.answer.join(
+            ", ",
+          )}</b></div>`;
+        if (q.type === "tfset")
+          res.innerHTML = `<div class="hint">Đáp án: <b>${q.statements
+            .map((s) => (s.answer ? "Đúng" : "Sai"))
+            .join(" · ")}</b></div>`;
+        if (q.type === "drag_pairs")
+          res.innerHTML = `<div class="hint">Đáp án:<br><b>${Object.entries(
+            q.pairs,
+          )
+            .map(([l, r]) => `${l} → ${r}`)
+            .join("<br>")}</b></div>`;
+        if (q.type === "drag_groups")
+          res.innerHTML = `<div class="hint">Đáp án:<br><b>${Object.entries(
+            q.groups,
+          )
+            .map(([g, a]) => `${g}: ${a.join(", ")}`)
+            .join("<br>")}</b></div>`;
+      }
+
+      function checkAll() {
+        let correct = 0;
+        WORK.forEach((q, qi) => {
+          const res = document.getElementById(`res_${qi}`);
+          const user = getUserAnswer(q, qi);
+          if (isCorrect(q, user)) {
+            correct++;
+            res.textContent = "✔ Đúng";
+            res.className = "result r-good";
+          } else {
+            res.textContent = "✘ Sai";
+            res.className = "result r-bad";
+          }
+        });
+        document.getElementById("meta").textContent =
+          `${correct}/${WORK.length} đúng`;
+      }
+
+      document.getElementById("btnCheck").addEventListener("click", checkAll);
+      document
+        .getElementById("btnReset")
+        .addEventListener("click", () => reset(true));
+      let keyVisible = false;
+      document.getElementById("btnToggleKey").addEventListener("click", () => {
+        keyVisible = !keyVisible;
+        WORK.forEach((q, qi) => {
+          if (keyVisible) showKey(q, qi);
+          else {
+            const r = document.getElementById(`res_${qi}`);
+            r.textContent = "";
+            r.className = "result";
+          }
+        });
+      });
+
+      reset(true);
+    </script>
+  </body>
+</html>
